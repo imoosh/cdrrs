@@ -1,0 +1,59 @@
+# conf for xfyuniat-service
+# created by Yao Wen, 2020-03-03
+---
+Logging:
+  logPath: ./log
+  logFile: main.log
+  fileLevel: DEBUG
+  consoleLevel: DEBUG
+  maxAge: 7
+  maxSize: 10
+
+Database:
+  host: 127.0.0.1
+  port: 3306
+  username: root
+  password: 123456
+  dbname: centnet_cdr
+  pingDuration: 600
+
+Recording:
+  enable: true
+  path: ./audio
+
+WebApiServer:
+  host: 192.168.1.14
+  port: 6060
+
+XunFeiAPI:
+  appId: 5e369153
+  apiSecret: be2f9f82efca04d5c80e9420c79a5027
+  apiKey: 489fc60f599403f56417d3b623c4b2aa
+  apiUrl: wss://iat-service.xfyun.cn/v2/iat
+  audioFormat: audio/L16;rate=8000
+
+Patterns:
+  500:
+    -
+  501:
+    - 无法接通
+    - 线路忙
+  502:
+    - 用户忙
+  503:
+    - 通话中
+  504:
+    - 无人接听
+  505:
+    - 拒接
+  506:
+    - 关机
+  507:
+    - 停机
+  508:
+    - 空号
+  509:
+    - 呼叫转移
+    - 转接
+
+...
