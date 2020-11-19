@@ -5,7 +5,7 @@
       <paths name="192.168.1.15">
         <serverdata>
           <mappings>
-            <mapping deploy="/go/src/VoipSniffer" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/go/src/centnet-cdrrs" local="$PROJECT_DIR$/../centnet-cdrrs" web="/" />
           </mappings>
         </serverdata>
       </paths>

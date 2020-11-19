@@ -7,5 +7,5 @@ const (
 
 var (
 	ReadPattern = 0
-	FilePath    = "/Users/wayne/go/src/VoipSniffer/adapter/file/files"
+	FilePath    = "/Users/wayne/go/src/centnet-cdrrs/adapter/file/files"
 )

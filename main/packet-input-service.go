@@ -1,7 +1,7 @@
 package main
 
 import (
-	"VoipSniffer/adapter/kafka/analytic"
+    "VoipSniffer/adapter/kafka/analytic"
 	"flag"
 	"fmt"
 	"os"
