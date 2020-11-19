@@ -1,0 +1,39 @@
+# config for centnet-voip-sniffer
+# created by Wayne Yao, 2020-11-17
+
+[logging]
+    logPath = "./log"
+    logFile = "main.log"
+    fileLevel= "DEBUG"
+    consoleLevel = "DEBUG"
+    maxAge = 7
+    maxSize =  10
+
+[kafka]
+    # 待分析数据的消费者
+    [kafka.analytic.consumer]
+        topic = "SipPacket"
+        broker = "192.168.1.205:9092"
+        partition = 4
+        replication = 1
+        group = "AnalyticCluster"
+        version = "2.0.0"
+
+        numRoutine = 4
+
+    [kafka.analytic.producer]
+        topic = "SipPacket"
+        broker = "192.168.1.205:9092"
+        frequency = 500
+        maxMessage = 1000000
+
+    [kafka.analyzed.consumer]
+    [kafka.analyzed.producer]
+
+[sniffer]
+    Device = "enp2s0"
+    SnapLen = 65535
+    Filter = "udp"
+
+[mysql]
+    dsn = "root:123456@tcp(192.168.1.14:3306)/centnet_voip?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"

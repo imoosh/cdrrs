@@ -3,6 +3,7 @@ module VoipSniffer
 go 1.14
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/Shopify/sarama v1.27.2
 	github.com/astaxie/beego v1.12.3
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
@@ -17,4 +18,5 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tebeka/strftime v0.1.5 // indirect
 	go.uber.org/zap v1.16.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )

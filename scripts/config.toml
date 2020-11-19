@@ -1,5 +1,5 @@
-# config for iat-service
-# created by Wayne Yao, 2020-04-24
+# config for centnet-voip-sniffer
+# created by Wayne Yao, 2020-11-17
 
 [logging]
     logPath = "./log"
@@ -9,71 +9,31 @@
     maxAge = 7
     maxSize =  10
 
+[kafka]
+    # 待分析数据的消费者
+    [kafka.analytic.consumer]
+        topic = "SipPacket"
+        broker = "192.168.1.205:9092"
+        partition = 4
+        replication = 1
+        group = "AnalyticCluster"
+        version = "2.0.0"
+
+        numRoutine = 4
+
+    [kafka.analytic.producer]
+        topic = "SipPacket"
+        broker = "192.168.1.205:9092"
+        frequency = 500
+        maxMessage = 1000000
+
+    [kafka.analyzed.consumer]
+    [kafka.analyzed.producer]
+
+[sniffer]
+    Device = "enp2s0"
+    SnapLen = 65535
+    Filter = "udp"
+
 [mysql]
-    addr = "admin"
-    dsn = "root:123456@tcp(127.0.0.1:3306)/centnet_cdr?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
-    readDSN = ["root:123456@tcp(127.0.0.1:3306)/centnet_cdr?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"]
-	active = 20
-	idle = 10
-	idleTimeout ="4h"
-	queryTimeout = "100ms"
-	execTimeout = "100ms"
-	tranTimeout = "200ms"
-#    pingDuration = "10m"
-
-[recording]
-    enable = true
-    path =  "./audio"
-
-[asrApi]
-  host = "192.168.1.14"
-  port = 6060
-
-[xfyunApi]
-    appId = "5e369153"
-    apiSecret = "be2f9f82efca04d5c80e9420c79a5027"
-    apiKey = "489fc60f599403f56417d3b623c4b2aa"
-    apiUrl = "wss://iat-api.xfyun.cn/v2/iat"
-    audioFormat = "audio/L16;rate=8000"
-
-[status]
-    [[status.option]]
-        code = 500
-        desc = "unknown"
-        words = []
-    [[status.option]]
-        code = 501
-        desc = "unable to connect"
-        words = ["无法接通", "线路忙"]
-    [[status.option]]
-        code = 502
-        desc = "user busy"
-        words = ["用户忙"]
-    [[status.option]]
-        code = 503
-        desc = "on the line"
-        words = ["通话中"]
-    [[status.option]]
-        code = 504
-        desc = "no answer"
-        words = ["无人接听"]
-    [[status.option]]
-        code = 505
-        desc = "reject"
-        words = ["拒接"]
-    [[status.option]]
-        code = 506
-        desc = "power off"
-        words = ["关机"]
-    [[status.option]]
-        code = 507
-        desc = "out of service"
-        words = ["停机"]
-    [[status.option]]
-        code = 508
-        desc = "vacant number"
-        words = ["空号"]
-    [[status.option]]
-        code = 509
-        desc = "call forwarding"
-        words = ["呼叫转移", "转接"]
+    dsn = "root:123456@tcp(192.168.1.14:3306)/centnet_voip?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
