@@ -1,7 +1,7 @@
 package file
 
 import (
-    "VoipSniffer/library/log"
+	"centnet-cdrrs/library/log"
 	"strings"
 )
 

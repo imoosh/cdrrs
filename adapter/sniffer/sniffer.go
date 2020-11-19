@@ -1,8 +1,8 @@
 package sniffer
 
 import (
-    "VoipSniffer/library/log"
 	"bytes"
+	"centnet-cdrrs/library/log"
 
 	"errors"
 	"fmt"

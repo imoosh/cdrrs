@@ -1,11 +1,11 @@
 package main
 
 import (
-    "VoipSniffer/adapter"
-    "VoipSniffer/conf"
-    "VoipSniffer/dao"
-    "VoipSniffer/library/log"
-    "VoipSniffer/prot/sip"
+	"centnet-cdrrs/adapter"
+	"centnet-cdrrs/conf"
+	"centnet-cdrrs/dao"
+	"centnet-cdrrs/library/log"
+	"centnet-cdrrs/prot/sip"
 	"flag"
 	"fmt"
 	"github.com/astaxie/beego/orm"

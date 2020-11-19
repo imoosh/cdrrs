@@ -1,11 +1,11 @@
 package analytic
 
 import (
-    "VoipSniffer/adapter/kafka/analytic/file"
-    "VoipSniffer/dao"
-    "VoipSniffer/library/log"
-    "VoipSniffer/prot/sip"
-    "VoipSniffer/prot/udp"
+	"centnet-cdrrs/adapter/kafka/analytic/file"
+	"centnet-cdrrs/dao"
+	"centnet-cdrrs/library/log"
+	"centnet-cdrrs/prot/sip"
+	"centnet-cdrrs/prot/udp"
 	"strconv"
 )
 

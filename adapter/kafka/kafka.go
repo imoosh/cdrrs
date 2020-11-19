@@ -1,6 +1,6 @@
 package kafka
 
-import "VoipSniffer/adapter/kafka/analytic"
+import "centnet-cdrrs/adapter/kafka/analytic"
 
 type Config struct {
 	Analytic *analytic.Config

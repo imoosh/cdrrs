@@ -1,8 +1,8 @@
 package adapter
 
 import (
-    "VoipSniffer/adapter/kafka/analytic"
-    "VoipSniffer/adapter/sniffer"
+	"centnet-cdrrs/adapter/kafka/analytic"
+	"centnet-cdrrs/adapter/sniffer"
 )
 
 const (

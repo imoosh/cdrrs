@@ -1,11 +1,11 @@
 package conf
 
 import (
-    "VoipSniffer/adapter/kafka"
-    "VoipSniffer/adapter/sniffer"
-    "VoipSniffer/dao"
-    "VoipSniffer/library/log"
 	"bytes"
+	"centnet-cdrrs/adapter/kafka"
+	"centnet-cdrrs/adapter/sniffer"
+	"centnet-cdrrs/dao"
+	"centnet-cdrrs/library/log"
 	"fmt"
 	"github.com/BurntSushi/toml"
 )

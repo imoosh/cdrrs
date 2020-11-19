@@ -1,7 +1,7 @@
 package dao
 
 import (
-    "VoipSniffer/library/log"
+	"centnet-cdrrs/library/log"
 	"errors"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"

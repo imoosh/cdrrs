@@ -3,7 +3,7 @@ package analytic
 // 参考: https://www.cnblogs.com/mrblue/p/10770651.html
 
 import (
-    "VoipSniffer/library/log"
+	"centnet-cdrrs/library/log"
 	"context"
 	"fmt"
 	"github.com/Shopify/sarama"

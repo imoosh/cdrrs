@@ -1,8 +1,8 @@
 package dao
 
 import (
-    "VoipSniffer/prot/sip"
-    "VoipSniffer/prot/udp"
+	"centnet-cdrrs/prot/sip"
+	"centnet-cdrrs/prot/udp"
 	"fmt"
 	"github.com/astaxie/beego/orm"
 	"strconv"

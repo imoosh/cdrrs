@@ -1,4 +1,4 @@
-module VoipSniffer
+module centnet-cdrrs
 
 go 1.14
 

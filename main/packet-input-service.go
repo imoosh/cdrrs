@@ -1,7 +1,7 @@
 package main
 
 import (
-    "VoipSniffer/adapter/kafka/analytic"
+	"centnet-cdrrs/adapter/kafka/analytic"
 	"flag"
 	"fmt"
 	"os"

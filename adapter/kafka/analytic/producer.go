@@ -1,7 +1,7 @@
 package analytic
 
 import (
-    "VoipSniffer/library/log"
+	"centnet-cdrrs/library/log"
 	"fmt"
 	"github.com/Shopify/sarama"
 	"strings"

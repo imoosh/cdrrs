@@ -1,10 +1,10 @@
 package sniffer
 
 import (
-    "VoipSniffer/dao"
-    "VoipSniffer/library/log"
-    "VoipSniffer/prot/sip"
-    "VoipSniffer/prot/udp"
+	"centnet-cdrrs/dao"
+	"centnet-cdrrs/library/log"
+	"centnet-cdrrs/prot/sip"
+	"centnet-cdrrs/prot/udp"
 	"fmt"
 )
 

@@ -1,7 +1,7 @@
 package log
 
 import (
-    "VoipSniffer/library/log/_zap"
+	"centnet-cdrrs/library/log/_zap"
 	"fmt"
 	"go.uber.org/zap"
 	"time"
