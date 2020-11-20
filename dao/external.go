@@ -15,6 +15,9 @@ type UnpackedMessage struct {
 	SIP       *sip.SipMsg
 }
 
+type CdrMessage struct {
+}
+
 func InsertSipPacket(msg *UnpackedMessage) {
 	var sipPacket Sip
 
@@ -64,4 +67,17 @@ func InsertSipPacket(msg *UnpackedMessage) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func InsertCdrData() {
+	var CdrData Cdr
+	//	保存数据
+	// ...
+
+	o := orm.NewOrm()
+	_, err := o.Insert(&CdrData)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 }

@@ -41,6 +41,22 @@ type Sip struct {
 	UserAgent     string
 }
 
+type Cdr struct {
+	Id             uint64
+	CallId         string
+	CallerIp       string
+	CallerPort     uint16
+	CalleeIP       string
+	CalleePort     uint16
+	CallerNum      string
+	CalleeNum      string
+	CallerDevice   string
+	CalleeDeice    string
+	ConnectTime    string
+	DisconnectTime string
+	Duration       int
+}
+
 func Init(c *Config) error {
 	//orm.Debug = true
 	err := orm.RegisterDataBase("default", "mysql", c.DSN, 30)
@@ -49,7 +65,7 @@ func Init(c *Config) error {
 		return errors.New("orm.RegisterDataBase failed")
 	}
 
-	orm.RegisterModel(new(Sip))
+	orm.RegisterModel(new(Sip), new(Cdr))
 
 	return nil
 }
