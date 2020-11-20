@@ -77,11 +77,16 @@ type Cdr struct {
 	CalleeCity     string
 	ConnectTime    string
 	DisconnectTime string
-	Duration       string
+	Duration       int
+}
+
+type Attribution struct {
+	province string
+	city     string
 }
 
 func init() {
-	dbLink := fmt.Sprintf("%s:%s@%s(%s:%s)/%s?charset=%s&loc=%v", USERNAME, PASSWORD,
+	dbLink := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?charset=%s", USERNAME, PASSWORD,
 		NETWORK, SERVER, PORT, DATABASE, CHARSET)
 
 	err := orm.RegisterDataBase("default", "mysql", dbLink)
@@ -91,141 +96,78 @@ func init() {
 }
 
 func ParseInvite(invite []byte) {
-
-	var invitedata Sip
-	err := json.Unmarshal(invite, &invitedata)
+	var inviteData Sip
+	err := json.Unmarshal(invite, &inviteData)
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	var byedata Sip
-	err = json.Unmarshal(invite, &byedata)
-	if err != nil {
-		fmt.Println(err)
+	fmt.Println(inviteData.CallId)
+	if inviteData.CseqMethod == "INVITE" && inviteData.ReqStatusCode == "200" {
+		o := orm.NewOrm()
+		_, err := o.Insert(&inviteData)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-
-	o := orm.NewOrm()
-	o.Insert(&invitedata)
 }
 
-func ParseBye(bye []byte) {
-	var byedata, invitedata Sip
-
-	err := json.Unmarshal(bye, &byedata)
+func ParseBye(bye []byte) *Cdr {
+	var byeData, inviteData Sip
+	var err error
+	err = json.Unmarshal(bye, &byeData)
 	if err != nil {
 		fmt.Println(err)
 	}
-	qs := orm.NewOrm().QueryTable("sip").Filter("call_id", byedata.CallId).One(&invitedata)
-	var cdrdata Cdr
-	cdrdata.CallId = invitedata.CallId
-	cdrdata.CallerIp = invitedata.Dip
-	cdrdata.CallerPort = invitedata.Dport
-	cdrdata.CalleeIp = invitedata.Sip
-	cdrdata.CalleePort = invitedata.Sport
-	cdrdata.CallerNum = invitedata.FromUser
-	cdrdata.CalleeNum = invitedata.ToUser
-	cdrdata.CallerDevice = byedata.CallId
-	cdrdata.CalleeDevice = invitedata.UserAgent
-	cdrdata.CalleeProvince = byedata.CallId
-	cdrdata.CalleeCity = byedata.CallId
-	cdrdata.ConnectTime = byedata.CallId
-	cdrdata.DisconnectTime = byedata.CallId
-	cdrdata.Duration = byedata.CallId
-	//generateCdr(qs)
-	orm.NewOrm().Insert(&byedata)
+	if byeData.CseqMethod != "BYE" || byeData.ReqStatusCode != "200" {
+		return nil
+	}
+	//根据bye 200ok包的call_id获取对应的invite 200ok的包
+	err = orm.NewOrm().QueryTable("sip_analytic_packet").Filter("call_id", byeData.CallId).One(&inviteData)
+	jsonStr, _ := json.Marshal(inviteData)
+	fmt.Println(jsonStr)
+	//填充话单字段信息
+	cdr := Cdr{
+		CallId:         inviteData.CallId,
+		CallerIp:       inviteData.Dip,
+		CallerPort:     inviteData.Dport,
+		CalleeIp:       inviteData.Sip,
+		CalleePort:     inviteData.Sport,
+		CallerNum:      inviteData.FromUser,
+		CalleeDevice:   inviteData.UserAgent,
+		CalleeNum:      inviteData.ToUser,
+		ConnectTime:    inviteData.EventTime,
+		DisconnectTime: byeData.EventTime,
+		Duration:       10,
+	}
+	if inviteData.Dip != byeData.Sip {
+		cdr.CallerDevice = byeData.UserAgent
+	} else {
+		cdr.CallerDevice = ""
+	}
+	cdr.CalleeProvince, cdr.CalleeCity = getCalleeAttribution(&inviteData)
+	generateCdr(&cdr)
+	_, err = orm.NewOrm().Insert(&byeData)
+	return &cdr
 }
 
-func generateCdr(qs *orm.querySet) {
-	selectsql := `
-	SELECT
-	call_id,
-	caller_ip,
-	caller_port,
-	callee_ip,
-	callee_port,
-	caller_number,
-	callee_num,
-	caller_device,
-	callee_device,
-	province AS callee_province,
-	city AS callee_city,
-	connect_time,
-	disconnect_time,
-	duration
-FROM
-	(
-		SELECT
-			call_id,
-			sip AS caller_ip,
-			sport AS caller_port,
-			dip AS callee_ip,
-			dport AS callee_port,
-			from_user AS caller_number,
-			to_user AS callee_num,
-			GROUP_CONCAT(
-				CASE
-				WHEN cseq_method = "BYE" && req_status_code = "200" THEN
-					user_agent
-				END
-			) AS caller_device,
-			GROUP_CONCAT(
-				CASE
-				WHEN cseq_method = "INVITE" && req_status_code = "200" THEN
-					user_agent
-				END
-			) AS callee_device,
-			GROUP_CONCAT(
-				CASE
-				WHEN cseq_method = "INVITE" && req_status_code = "200" THEN
-					event_time
-				END
-			) AS connect_time,
-			GROUP_CONCAT(
-				CASE
-				WHEN cseq_method = "BYE" && req_status_code = "200" THEN
-					event_time
-				END
-			) AS disconnect_time,
-			TIMESTAMPDIFF(
-				SECOND,
-				GROUP_CONCAT(
-					CASE
-					WHEN cseq_method = "INVITE" && req_status_code = "200" THEN
-						event_time
-					END
-				),
-				GROUP_CONCAT(
-					CASE
-					WHEN cseq_method = "BYE" && req_status_code = "200" THEN
-						event_time
-					END
-				)
-			) AS duration
-		FROM
-			sip_analytic_packet
-		GROUP BY
-			call_id
-	) AS a
-LEFT JOIN phone_position b ON SUBSTR(a.callee_num, 2, 7) = b.phone
-	`
+func getCalleeAttribution(inviteData *Sip) (province, city string) {
+	sql := fmt.Sprintf("SELECT province,city FROM (SELECT to_user FROM sip_analytic_packet WHERE cseq_method = \"INVITE\" AND req_status_code = \"200\" AND call_id = %s) AS a LEFT JOIN phone_position b ON SUBSTR(a.to_user,2,7) = b.phone", inviteData.CallId)
+	attribution := new(Attribution)
+	err := orm.NewOrm().Raw(sql).QueryRow(&attribution)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	insertsql := `
-	INSERT INTO cdr (
-		call_id,
-		caller_ip,
-		caller_port,
-		callee_ip,
-		callee_port,
-		caller_num,
-		callee_num,
-		caller_device,
-		callee_device,
-		connect_time,
-		disconnect_time,
-		duration
-	)` + selectsql
+	province = attribution.province
+	city = attribution.city
+	return
+}
 
-	_, err := orm.NewOrm().Raw(insertsql).Exec()
+func generateCdr(cdr *Cdr) {
+	sql := fmt.Sprintf("insert into voip_restored_cdr (%s,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%d)", cdr.CallId, cdr.CallerIp, cdr.CallerPort,
+		cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice, cdr.CalleeDevice, cdr.CalleeProvince,
+		cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
+	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
 		fmt.Println(err)
 	}

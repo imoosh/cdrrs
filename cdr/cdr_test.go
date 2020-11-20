@@ -18,7 +18,7 @@ import (
 //)
 
 func init() {
-	dbLink := fmt.Sprintf("%s:%s@%s(%s:%s)/%s?charset=%s&loc=%v", USERNAME, PASSWORD,
+	dbLink := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?charset=%s", USERNAME, PASSWORD,
 		NETWORK, SERVER, PORT, DATABASE, CHARSET)
 
 	err := orm.RegisterDataBase("default", "mysql", dbLink)
