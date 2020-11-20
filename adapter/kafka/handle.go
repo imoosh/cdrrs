@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"centnet-cdrrs/adapter/kafka/file"
+	"centnet-cdrrs/dao"
 	"centnet-cdrrs/cdr"
 	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/prot/sip"
@@ -11,39 +12,20 @@ import (
 )
 
 type Config struct {
-	SipPacketProducer  *ProducerConfig
-	SipPacketConsumer  *ConsumerConfig
-	RestoreCDRProducer *ProducerConfig
-	RestoreCDRConsumer *ConsumerConfig
-}
+	/* 原始数据包缓存配置 */
+	SipPacketProducer *ProducerConfig
 
-type AnalyzedPacket struct {
-	EventId       string `json:"eventId"`
-	EventTime     string `json:"eventTime"`
-	Sip           string `json:"sip"`
-	Sport         int    `json:"sport"`
-	Dip           string `json:"dip"`
-	Dport         int    `json:"dport"`
-	CallId        string `json:"callId"`
-	CseqMethod    string `json:"cseqMethod"`
-	ReqMethod     string `json:"reqMethod"`
-	ReqStatusCode int    `json:"reqStatusCode"`
-	ReqUser       string `json:"reqUser"`
-	ReqHost       string `json:"reqHost"`
-	ReqPort       int    `json:"reqPort"`
-	FromName      string `json:"fromName"`
-	FromUser      string `json:"fromUser"`
-	FromHost      string `json:"fromHost"`
-	FromPort      int    `json:"fromPort"`
-	ToName        string `json:"toName"`
-	ToUser        string `json:"toUser"`
-	ToHost        string `json:"toHost"`
-	ToPort        int    `json:"toPort"`
-	ContactName   string `json:"contactName"`
-	ContactUser   string `json:"contactUser"`
-	ContactHost   string `json:"contactHost"`
-	ContactPort   int    `json:"contactPort"`
-	UserAgent     string `json:"userAgent"`
+	/* 原始数据包读取配置 */
+	SipPacketConsumer *ConsumerConfig
+
+	/* 解析的数据包缓存配置 */
+	RestoreCDRProducer *ProducerConfig
+
+	/* 解析的数据包读取配置 */
+	RestoreCDRConsumer *ConsumerConfig
+
+	/* 话单数据推送配置 */
+	FraudModelProducer *ProducerConfig
 }
 
 // 解析sip报文
@@ -52,7 +34,7 @@ func AnalyzePacket(consumer *Consumer, data interface{}) {
 	rtd := file.Parse(string(data.([]byte)))
 	sipMsg := sip.Parse([]byte(rtd.ParamContent))
 
-	pkt := AnalyzedPacket{
+	pkt := dao.SipAnalyticPacket{
 		EventId:       rtd.EventId,
 		EventTime:     rtd.EventTime,
 		Sip:           rtd.SaddrV4,

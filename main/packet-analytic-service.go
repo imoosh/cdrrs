@@ -102,7 +102,7 @@ func main() {
 
 func main2() {
 
-	sipPacket := dao.Sip{
+	sipPacket := dao.SipAnalyticPacket{
 		Sip:           "192.168.1.98",
 		Sport:         5060,
 		Dip:           "192.168.1.14",
