@@ -1,7 +1,7 @@
 package main
 
 import (
-	"centnet-cdrrs/adapter/kafka/analytic"
+	"centnet-cdrrs/adapter/kafka"
 	"flag"
 	"fmt"
 	"os"
@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-var pc = analytic.ProducerConfig{
+var pc = kafka.ProducerConfig{
 	Topic:      "SipPacket",
 	Broker:     "192.168.1.205:9092",
 	Frequency:  500,
@@ -47,7 +47,7 @@ func getAppVersion() string {
 }
 
 func main() {
-	producer, err := analytic.NewProducer(&pc)
+	producer, err := kafka.NewProducer(&pc)
 	if err != nil {
 		panic(err)
 	}

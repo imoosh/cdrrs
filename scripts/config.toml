@@ -10,25 +10,39 @@
     maxSize =  10
 
 [kafka]
-    # 待分析数据的消费者
-    [kafka.analytic.consumer]
+    # sip原始消息生产者
+    [kafka.sipPacketProducer]
+        topic = "SipPacket"
+        broker = "192.168.1.205:9092"
+        frequency = 500
+        maxMessage = 1000000
+
+    # sip消息分析消费者
+    [kafka.sipPacketConsumer]
         topic = "SipPacket"
         broker = "192.168.1.205:9092"
         partition = 4
         replication = 1
         group = "AnalyticCluster"
         version = "2.0.0"
-
         numRoutine = 4
 
-    [kafka.analytic.producer]
-        topic = "SipPacket"
+    # 待还原话单数据生产者
+    [kafka.restoreCDRProducer]
+        topic = "restoreCDRData"
         broker = "192.168.1.205:9092"
         frequency = 500
         maxMessage = 1000000
 
-    [kafka.analyzed.consumer]
-    [kafka.analyzed.producer]
+    # 话单数据生产者
+    [kafka.restoreCDRConsumer]
+        topic = "restoreCDRData"
+        broker = "192.168.1.205:9092"
+        partition = 4
+        replication = 1
+        group = "RestoreCDRCluster"
+        version = "2.0.0"
+        numRoutine = 4
 
 [sniffer]
     Device = "enp2s0"
