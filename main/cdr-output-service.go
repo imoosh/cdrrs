@@ -1,12 +1,16 @@
 package main
 
 import (
+	"centnet-cdrrs/adapter/kafka"
+	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
-	"database/sql"
+	"centnet-cdrrs/library/log"
 	"flag"
 	"fmt"
 	"os"
-	"time"
+	"os/signal"
+	"runtime"
+	"syscall"
 )
 
 var (
@@ -15,15 +19,6 @@ var (
 	BuiltHost   string
 	BuiltTime   string
 	GoVersion   string
-)
-
-const (
-	USERNAME = "root"
-	PASSWORD = "123456"
-	NETWORK  = "tcp"
-	SERVER   = "192.168.1.205"
-	PORT     = 3306
-	DATABASE = "centnet_voip"
 )
 
 func init() {
@@ -49,5 +44,47 @@ func getAppVersion() string {
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	/* 解析参数 */
+	flag.Parse()
+	conf.Init()
+	fmt.Println(conf.Conf)
+
+	/* 日志模块初始化 */
+	log.Init(conf.Conf.Logging)
+
+	/* 数据库模块初始化 */
+	err := dao.Init(conf.Conf.Mysql)
+	if err != nil {
+		log.Error(err)
+		os.Exit(-1)
+	}
+
+	/* 还原的话单数据交给诈骗分析模型 */
+	fraudAnalysisProducer, err := kafka.NewProducer(conf.Conf.Kafka.RestoreCDRProducer)
+	if err != nil {
+		log.Error(err)
+		os.Exit(-1)
+	}
+	fraudAnalysisProducer.Run()
+
+	/* sip包数据消费者 */
+	restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.SipPacketConsumer, kafka.RestoreCDR)
+	if restoreCDRConsumer == nil {
+		log.Error("NewConsumer Error.")
+		os.Exit(-1)
+	}
+	/* 解析完的sip包数据交给下一级的生产者处理 */
+	restoreCDRConsumer.SetNextProducer(fraudAnalysisProducer)
+	err = restoreCDRConsumer.Run()
+	if err != nil {
+		log.Error(err)
+		os.Exit(-1)
+	}
+
+	// os signal
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+	<-sigterm
 }

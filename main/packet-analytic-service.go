@@ -1,7 +1,7 @@
 package main
 
 import (
-	"centnet-cdrrs/adapter"
+	"centnet-cdrrs/adapter/kafka"
 	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
@@ -58,21 +58,37 @@ func main() {
 	log.Init(conf.Conf.Logging)
 
 	/* 数据库模块初始化 */
-	err := dao.Init(conf.Conf.Mysql)
+	//err := dao.Init(conf.Conf.Mysql)
+	//if err != nil {
+	//    log.Error(err)
+	//    os.Exit(-1)
+	//}
+
+	/* 待还原话单数据生产者 */
+	restoreCDRProducer, err := kafka.NewProducer(conf.Conf.Kafka.RestoreCDRProducer)
 	if err != nil {
 		log.Error(err)
 		os.Exit(-1)
 	}
+	restoreCDRProducer.Run()
 
-	/* 数据接入适配器初始化 */
-	collector := adapter.NewAdapter(adapter.KafkaConsumerAdapter, conf.Conf.Kafka.Analytic.Consumer)
-	if collector == nil {
-		log.Error("NewAdapter Error.")
+	/* sip包数据生产者 */
+	sipPacketProducer, err := kafka.NewProducer(conf.Conf.Kafka.SipPacketProducer)
+	if err != nil {
+		log.Error(err)
 		os.Exit(-1)
 	}
+	sipPacketProducer.Run()
 
-	/* 开启数据接入 */
-	err = collector.Run()
+	/* sip包数据消费者 */
+	sipPacketConsumer := kafka.NewConsumer(conf.Conf.Kafka.SipPacketConsumer, kafka.AnalyzePacket)
+	if sipPacketConsumer == nil {
+		log.Error("NewConsumer Error.")
+		os.Exit(-1)
+	}
+	/* 解析完的sip包数据交给下一级的生产者处理 */
+	sipPacketConsumer.SetNextProducer(restoreCDRProducer)
+	err = sipPacketConsumer.Run()
 	if err != nil {
 		log.Error(err)
 		os.Exit(-1)
