@@ -42,6 +42,7 @@ func NewProducer(cfg *ProducerConfig) (*Producer, error) {
 	config.Producer.Flush.Frequency = time.Duration(cfg.Frequency) * time.Millisecond // Flush batches every 500ms
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
 
+	log.Debug(cfg.Broker, cfg.Topic)
 	p, err := sarama.NewAsyncProducer(strings.Split(cfg.Broker, ","), config)
 	if err != nil {
 		return nil, err
@@ -69,7 +70,7 @@ func (p *Producer) Run() {
 				p.producer.Input() <- m
 			case err := <-p.producer.Errors():
 				if err != nil && err.Msg != nil {
-					fmt.Printf("[producer] err=[%s] topic=[%s] key=[%s] val=[%s]\n",
+					log.Errorf("[producer] err=[%s] topic=[%s] key=[%s] val=[%s]",
 						err.Error(), err.Msg.Topic, err.Msg.Key, err.Msg.Value)
 				}
 			case <-p.closeChan:

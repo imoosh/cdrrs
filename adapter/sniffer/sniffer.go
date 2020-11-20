@@ -80,8 +80,8 @@ func (ps *PacketSniffer) Run() error {
 		data := &rawData{
 			SrcIP:   ipLayer.SrcIP.String(),
 			DstIP:   ipLayer.DstIP.String(),
-			SrcPort: uint16(udpLayer.SrcPort),
-			DstPort: uint16(udpLayer.DstPort),
+			SrcPort: int(udpLayer.SrcPort),
+			DstPort: int(udpLayer.DstPort),
 			Payload: udpLayer.Payload,
 		}
 

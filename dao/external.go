@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/prot/sip"
 	"centnet-cdrrs/prot/udp"
 	"fmt"
@@ -16,7 +17,7 @@ type UnpackedMessage struct {
 }
 
 func InsertSipPacket(msg *UnpackedMessage) {
-	var sipPacket Sip
+	var sipPacket SipAnalyticPacket
 
 	sipPacket.EventId = msg.EventId
 	sipPacket.EventTime = msg.EventTime
@@ -63,5 +64,13 @@ func InsertSipPacket(msg *UnpackedMessage) {
 	_, err := o.Insert(&sipPacket)
 	if err != nil {
 		fmt.Println(err)
+	}
+}
+
+func InsertCDR(cdr VoipRestoredCdr) {
+	o := orm.NewOrm()
+	_, err := o.Insert(&cdr)
+	if err != nil {
+		log.Error(err)
 	}
 }

@@ -11,8 +11,8 @@ import (
 type rawData struct {
 	SrcIP   string
 	DstIP   string
-	SrcPort uint16
-	DstPort uint16
+	SrcPort int
+	DstPort int
 	Payload []byte
 }
 
