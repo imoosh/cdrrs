@@ -16,6 +16,11 @@ type UnpackedMessage struct {
 	SIP       *sip.SipMsg
 }
 
+type Attribution struct {
+	province string
+	city     string
+}
+
 func InsertSipPacket(msg *UnpackedMessage) {
 	var sipPacket SipAnalyticPacket
 
@@ -67,10 +72,46 @@ func InsertSipPacket(msg *UnpackedMessage) {
 	}
 }
 
-func InsertCDR(cdr VoipRestoredCdr) {
-	o := orm.NewOrm()
-	_, err := o.Insert(&cdr)
+//func InsertCDR(cdr VoipRestoredCdr) {
+//	o := orm.NewOrm()
+//	_, err := o.Insert(&cdr)
+//	if err != nil {
+//		log.Error(err)
+//	}
+//}
+
+func GetCalleeAttribution(inviteData *SipAnalyticPacket) (province, city string) {
+	sql := fmt.Sprintf("SELECT province,city FROM (SELECT to_user FROM sip_analytic_packet WHERE cseq_method = \"INVITE\" AND req_status_code = \"200\" AND call_id = %s) AS a LEFT JOIN phone_position b ON SUBSTR(a.to_user,2,7) = b.phone", inviteData.CallId)
+	attribution := new(Attribution)
+	err := orm.NewOrm().Raw(sql).QueryRow(&attribution)
 	if err != nil {
+		province = ""
+		city = ""
+		log.Error(err)
+		return
+	}
+
+	province = attribution.province
+	city = attribution.city
+	return
+}
+
+func InsertCDR(cdr *VoipRestoredCdr) {
+	sql := fmt.Sprintf("insert into voip_restored_cdr (%s,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%d)", cdr.CallId, cdr.CallerIp, cdr.CallerPort,
+		cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice, cdr.CalleeDevice, cdr.CalleeProvince,
+		cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
+	_, err := orm.NewOrm().Raw(sql).Exec()
+	if err != nil {
+		log.Error(err)
+	}
+}
+
+func GetInvite200OKMsg(bye200ok *SipAnalyticPacket) {
+	var invite200OKMsg SipAnalyticPacket
+	err := orm.NewOrm().QueryTable("sip_analytic_packet").Filter("call_id", bye200ok.CallId).One(&invite200OKMsg)
+	if err != nil {
+		//未找到对应的200OK的包直接入库
+		_, err = orm.NewOrm().Insert(bye200ok)
 		log.Error(err)
 	}
 }

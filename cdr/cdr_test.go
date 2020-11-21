@@ -94,5 +94,5 @@ func TestParseBye(t *testing.T) {
 	}
 	`)
 
-	ParseBye(byeok)
+	ParseBye200OKMsg(byeok)
 }
