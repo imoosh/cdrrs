@@ -1,8 +1,6 @@
 package cdr
 
 import (
-	"fmt"
-	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
 	"testing"
 )
@@ -17,17 +15,19 @@ import (
 //	CHARSET  = "utf8"
 //)
 
-func init() {
-	dbLink := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?charset=%s", USERNAME, PASSWORD,
-		NETWORK, SERVER, PORT, DATABASE, CHARSET)
-
-	err := orm.RegisterDataBase("default", "mysql", dbLink)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
+//func init() {
+//	dbLink := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?charset=%s", USERNAME, PASSWORD,
+//		NETWORK, SERVER, PORT, DATABASE, CHARSET)
+//
+//	err := orm.RegisterDataBase("default", "mysql", dbLink)
+//	if err != nil {
+//		fmt.Println(err)
+//	}
+//}
 
 func TestParseInvite(t *testing.T) {
+	key := "04ab01e2d142787@192.168.6.24"
+
 	inviteok := []byte(`
 	{
 		"event_id": "10020044170",
@@ -59,11 +59,12 @@ func TestParseInvite(t *testing.T) {
 	}
 	`)
 
-	ParseInvite200OKMessage(inviteok)
+	ParseInvite200OKMessage([]byte(key), inviteok)
 }
 
 func TestParseBye(t *testing.T) {
-	byeok := []byte(`
+	key := "04ab01e2d142787@192.168.6.24"
+	byeOk := []byte(`
 	{
 		"event_id": "10020044170",
 	  	"event_time": "20201111100903",
@@ -94,5 +95,5 @@ func TestParseBye(t *testing.T) {
 	}
 	`)
 
-	ParseBye200OKMsg(byeok)
+	ParseBye200OKMsg([]byte(key), byeOk)
 }

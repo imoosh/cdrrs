@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type ConsumerHandler func(*Consumer, interface{})
+type ConsumerHandler func(*Consumer, interface{}, interface{})
 
 // Consumer Consumer配置
 type ConsumerConfig struct {
@@ -204,7 +204,7 @@ func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	for msg := range claim.Messages() {
 		count++
 
-		c.fun(c.customConsumer, msg.Value)
+		c.fun(c.customConsumer, msg.Key, msg.Value)
 
 		//key, value := string(msg.Key), string(msg.Value)
 		//fmt.Println(key, value, msg.Partition, count)
