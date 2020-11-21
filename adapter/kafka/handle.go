@@ -2,10 +2,12 @@ package kafka
 
 import (
 	"centnet-cdrrs/adapter/kafka/file"
+	"centnet-cdrrs/cdr"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/prot/sip"
 	"encoding/json"
+	"fmt"
 	"strconv"
 )
 
@@ -101,5 +103,14 @@ func AnalyzePacket(consumer *Consumer, data interface{}) {
 }
 
 func RestoreCDR(consumer *Consumer, data interface{}) {
+	cdr.ParseInvite200OKMessage(data.([]byte))
+	cdrpkt := cdr.ParseBye(data.([]byte))
+	jsonStr, err := json.Marshal(cdrpkt)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 
+	fmt.Println(jsonStr)
+	consumer.next.Log("", string(jsonStr))
 }
