@@ -59,7 +59,7 @@ func TestParseInvite(t *testing.T) {
 	}
 	`)
 
-	ParseInvite(inviteok)
+	ParseInvite200OKMessage(inviteok)
 }
 
 func TestParseBye(t *testing.T) {

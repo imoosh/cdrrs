@@ -95,7 +95,7 @@ func init() {
 	}
 }
 
-func ParseInvite(invite []byte) {
+func ParseInvite200OKMessage(invite []byte) {
 	var inviteData Sip
 	err := json.Unmarshal(invite, &inviteData)
 	if err != nil {
@@ -112,41 +112,45 @@ func ParseInvite(invite []byte) {
 }
 
 func ParseBye(bye []byte) *Cdr {
-	var byeData, inviteData Sip
+	var bye200OKMsg, invite200OKMsg Sip
 	var err error
-	err = json.Unmarshal(bye, &byeData)
+	err = json.Unmarshal(bye, &bye200OKMsg)
 	if err != nil {
 		fmt.Println(err)
 	}
-	if byeData.CseqMethod != "BYE" || byeData.ReqStatusCode != "200" {
+	if bye200OKMsg.CseqMethod != "BYE" || bye200OKMsg.ReqStatusCode != "200" {
 		return nil
 	}
-	//根据bye 200ok包的call_id获取对应的invite 200ok的包
-	err = orm.NewOrm().QueryTable("sip_analytic_packet").Filter("call_id", byeData.CallId).One(&inviteData)
-	jsonStr, _ := json.Marshal(inviteData)
+	//根据BYE 200OK包的call_id获取对应的INVITE 200OK的包
+	err = orm.NewOrm().QueryTable("sip_analytic_packet").Filter("call_id", bye200OKMsg.CallId).One(&invite200OKMsg)
+	jsonStr, _ := json.Marshal(invite200OKMsg)
 	fmt.Println(jsonStr)
 	//填充话单字段信息
 	cdr := Cdr{
-		CallId:         inviteData.CallId,
-		CallerIp:       inviteData.Dip,
-		CallerPort:     inviteData.Dport,
-		CalleeIp:       inviteData.Sip,
-		CalleePort:     inviteData.Sport,
-		CallerNum:      inviteData.FromUser,
-		CalleeDevice:   inviteData.UserAgent,
-		CalleeNum:      inviteData.ToUser,
-		ConnectTime:    inviteData.EventTime,
-		DisconnectTime: byeData.EventTime,
+		CallId:         invite200OKMsg.CallId,
+		CallerIp:       invite200OKMsg.Dip,
+		CallerPort:     invite200OKMsg.Dport,
+		CalleeIp:       invite200OKMsg.Sip,
+		CalleePort:     invite200OKMsg.Sport,
+		CallerNum:      invite200OKMsg.FromUser,
+		CalleeDevice:   invite200OKMsg.UserAgent,
+		CalleeNum:      invite200OKMsg.ToUser,
+		ConnectTime:    invite200OKMsg.EventTime,
+		DisconnectTime: bye200OKMsg.EventTime,
 		Duration:       10,
 	}
-	if inviteData.Dip != byeData.Sip {
-		cdr.CallerDevice = byeData.UserAgent
+	//INVITE的200OK的目的ip为主叫ip，若与BYE的200OK源ip一致，则是被叫挂机，主叫发200 OK,此时user_agent为主叫设备信息
+	if invite200OKMsg.Dip == bye200OKMsg.Sip {
+		cdr.CallerDevice = bye200OKMsg.UserAgent
+
 	} else {
+		//主叫挂机，user_agent为被叫设备信息，此时获取不到主叫设备信息
 		cdr.CallerDevice = ""
 	}
-	cdr.CalleeProvince, cdr.CalleeCity = getCalleeAttribution(&inviteData)
+	//获取被叫归属地
+	cdr.CalleeProvince, cdr.CalleeCity = getCalleeAttribution(&invite200OKMsg)
 	generateCdr(&cdr)
-	_, err = orm.NewOrm().Insert(&byeData)
+	_, err = orm.NewOrm().Insert(&bye200OKMsg)
 	return &cdr
 }
 
