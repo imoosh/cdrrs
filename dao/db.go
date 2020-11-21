@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var phonePositionMap = make(map[string]interface{})
+
 type Config struct {
 	DSN string
 }
@@ -63,6 +65,20 @@ type VoipRestoredCdr struct {
 	FraudType      string    `json:"fraudType"`
 }
 
+type PhonePosition struct {
+	Id         int
+	Prefix     string
+	Phone      string
+	Province   string
+	ProvinceId int64
+	City       string
+	CityId     int64
+	Isp        string
+	Code1      string
+	Zip        string
+	Types      string
+}
+
 type DateTime time.Time
 
 //func (t DateTime) MarshalJSON() ([]byte, error) {
@@ -97,6 +113,9 @@ func Init(c *Config) error {
 
 	orm.RegisterModel(new(SipAnalyticPacket))
 	orm.RegisterModel(new(VoipRestoredCdr))
+	orm.RegisterModel(new(PhonePosition))
 
+	// 将号码归属地表预读到内存中，加速查询速度
+	QueryPhonePosition()
 	return nil
 }

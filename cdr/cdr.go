@@ -1,13 +1,10 @@
 package cdr
 
 import (
-	"centnet-cdrrs/dao"
-	"centnet-cdrrs/library/log"
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
-	"time"
 )
 
 const (

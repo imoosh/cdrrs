@@ -21,6 +21,35 @@ type Attribution struct {
 	city     string
 }
 
+func QueryPhonePosition() {
+	o := orm.NewOrm()
+	pp := new(PhonePosition)
+	var pps []PhonePosition
+
+	n, err := o.QueryTable(pp).Filter("phone", "1811300").All(&pps)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Debugf("query phone_position %d rows", n)
+
+	for _, val := range pps {
+		phonePositionMap[val.Phone] = val
+	}
+}
+
+func GetPositionByPhoneNum(phone string) PhonePosition {
+	if len(phone) != 11 {
+		log.Error("invalid phone number:", phone)
+		return PhonePosition{}
+	}
+
+	if pp, ok := phonePositionMap[phone[0:7]]; ok {
+		return pp.(PhonePosition)
+	}
+	return PhonePosition{}
+}
+
 func InsertSipPacket(msg *UnpackedMessage) {
 	var sipPacket SipAnalyticPacket
 
