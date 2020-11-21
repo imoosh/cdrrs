@@ -85,15 +85,15 @@ type Attribution struct {
 	city     string
 }
 
-func init() {
-	dbLink := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?charset=%s", USERNAME, PASSWORD,
-		NETWORK, SERVER, PORT, DATABASE, CHARSET)
-
-	err := orm.RegisterDataBase("default", "mysql", dbLink)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
+//func init() {
+//	dbLink := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?charset=%s", USERNAME, PASSWORD,
+//		NETWORK, SERVER, PORT, DATABASE, CHARSET)
+//
+//	err := orm.RegisterDataBase("default", "mysql", dbLink)
+//	if err != nil {
+//		fmt.Println(err)
+//	}
+//}
 
 func ParseInvite200OKMessage(invite []byte) {
 	var inviteData Sip

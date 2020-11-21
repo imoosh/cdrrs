@@ -2,6 +2,7 @@ package main
 
 import (
 	"centnet-cdrrs/adapter/kafka"
+	"centnet-cdrrs/adapter/redis"
 	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
@@ -47,6 +48,7 @@ func getAppVersion() string {
 }
 
 func main() {
+	var err error
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	/* 解析参数 */
@@ -57,36 +59,44 @@ func main() {
 	/* 日志模块初始化 */
 	log.Init(conf.Conf.Logging)
 
+	/* redis初始化 */
+	if err = redis.Init(conf.Conf.Redis); err != nil {
+		log.Error(err)
+		os.Exit(-1)
+	}
+
 	/* 数据库模块初始化 */
-	err := dao.Init(conf.Conf.Mysql)
+	err = dao.Init(conf.Conf.Mysql)
 	if err != nil {
 		log.Error(err)
 		os.Exit(-1)
 	}
 
-	/* 还原的话单数据交给诈骗分析模型 */
-	fraudAnalysisProducer, err := kafka.NewProducer(conf.Conf.Kafka.FraudModelProducer)
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
-	}
-	fraudAnalysisProducer.Run()
-
-	/* sip包数据消费者 */
-	restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.RestoreCDRConsumer, kafka.RestoreCDR)
-	if restoreCDRConsumer == nil {
-		log.Error("NewConsumer Error.")
-		os.Exit(-1)
-	}
-	/* 解析完的sip包数据交给下一级的生产者处理 */
-	restoreCDRConsumer.SetNextProducer(fraudAnalysisProducer)
-	err = restoreCDRConsumer.Run()
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
-	}
+	///* 还原的话单数据交给诈骗分析模型 */
+	//fraudAnalysisProducer, err := kafka.NewProducer(conf.Conf.Kafka.FraudModelProducer)
+	//if err != nil {
+	//	log.Error(err)
+	//	os.Exit(-1)
+	//}
+	//fraudAnalysisProducer.Run()
+	//
+	///* sip包数据消费者 */
+	//restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.RestoreCDRConsumer, kafka.RestoreCDR)
+	//if restoreCDRConsumer == nil {
+	//	log.Error("NewConsumer Error.")
+	//	os.Exit(-1)
+	//}
+	///* 解析完的sip包数据交给下一级的生产者处理 */
+	//restoreCDRConsumer.SetNextProducer(fraudAnalysisProducer)
+	//err = restoreCDRConsumer.Run()
+	//if err != nil {
+	//	log.Error(err)
+	//	os.Exit(-1)
+	//}
 
 	//mock(fraudAnalysisProducer)
+
+	dao.QueryPhonePosition()
 
 	// os signal
 	sigterm := make(chan os.Signal, 1)

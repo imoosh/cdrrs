@@ -3,6 +3,7 @@ package conf
 import (
 	"bytes"
 	"centnet-cdrrs/adapter/kafka"
+	"centnet-cdrrs/adapter/redis"
 	"centnet-cdrrs/adapter/sniffer"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
@@ -19,6 +20,7 @@ type Config struct {
 	Kafka   *kafka.Config
 	Sniffer *sniffer.Config
 	Mysql   *dao.Config
+	Redis   *redis.Config
 }
 
 func (c *Config) String() string {
