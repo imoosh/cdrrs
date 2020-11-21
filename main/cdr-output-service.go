@@ -98,7 +98,7 @@ func mock(producer *kafka.Producer) {
 
 	rand.Seed(time.Now().UnixNano())
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1000; i++ {
 		cdr := dao.VoipRestoredCdr{
 			Id:             int64(i),
 			CallId:         fmt.Sprintf("04ab01e2d142787@192.168.6.24-%04d", i),
@@ -124,7 +124,7 @@ func mock(producer *kafka.Producer) {
 		producer.Log("cdr", string(jsonStr))
 	}
 
-	for i := 0; i < 10000; i++ {
+	for i := 1000; i < 2000; i++ {
 		cdr := dao.VoipRestoredCdr{
 			Id:             int64(i),
 			CallId:         fmt.Sprintf("04ab01e2d142787@192.168.6.24-%04d", i),

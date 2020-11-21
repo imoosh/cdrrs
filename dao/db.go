@@ -4,9 +4,9 @@ import (
 	"centnet-cdrrs/library/log"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
+	"strconv"
 	"time"
 )
 
@@ -65,9 +65,13 @@ type VoipRestoredCdr struct {
 
 type DateTime time.Time
 
+//func (t DateTime) MarshalJSON() ([]byte, error) {
+//	var stamp = fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02 15:04:05"))
+//	return []byte(stamp), nil
+//}
+
 func (t DateTime) MarshalJSON() ([]byte, error) {
-	var stamp = fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02 15:04:05"))
-	return []byte(stamp), nil
+	return ([]byte)(strconv.FormatInt(time.Time(t).Unix(), 10)), nil
 }
 
 func (cdr VoipRestoredCdr) MarshalJSON() ([]byte, error) {
