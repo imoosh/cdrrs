@@ -43,13 +43,13 @@ func ParseInvite200OKMessage(key, value interface{}) {
 	var invite200OKMsg dao.SipAnalyticPacket
 	err := json.Unmarshal([]byte(value.(string)), &invite200OKMsg)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 	if invite200OKMsg.CseqMethod == "INVITE" && invite200OKMsg.ReqStatusCode == 200 {
 		//	invite200OK插入redis
 		//redis.RedisConn.PutWithExpire(key.(string), value.(string), 5)
 		redis.RedisConn.Put(key.(string), value.(string))
-		fmt.Println("Insert redis ok")
+		log.Debug("Insert redis ok")
 	}
 }
 
@@ -68,12 +68,12 @@ func ParseBye200OKMsg(key, value interface{}) *dao.VoipRestoredCdr {
 	//根据BYE 200OK包的call_id从redis获取对应的INVITE 200OK的包
 	redisInvite200OK, notGet := redis.RedisConn.Get(key.(string))
 	if notGet != nil {
-		fmt.Println("get invite200ok failed")
+		log.Error("get invite200ok failed")
 		return nil
 	}
 	err = json.Unmarshal([]byte(redisInvite200OK), &invite200OKMsg)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 	//查询成功后删除redis中INVITE 200OK包
 	redis.RedisConn.Delete(key.(string))
@@ -98,27 +98,24 @@ func ParseBye200OKMsg(key, value interface{}) *dao.VoipRestoredCdr {
 	}
 	//获取被叫归属地
 	calleeAtrribution = dao.GetPositionByPhoneNum(invite200OKMsg.ToUser)
-	fmt.Println(invite200OKMsg.ToUser, calleeAtrribution.Province, calleeAtrribution.City)
+	//fmt.Println(invite200OKMsg.ToUser, calleeAtrribution.Province, calleeAtrribution.City)
 	cdr.CalleeProvince = calleeAtrribution.Province
 	cdr.CalleeCity = calleeAtrribution.City
 	timeConnect := fmt.Sprintf("%s-%s-%s %s:%s:%s", invite200OKMsg.EventTime[0:4], invite200OKMsg.EventTime[4:6],
 		invite200OKMsg.EventTime[6:8], invite200OKMsg.EventTime[8:10], invite200OKMsg.EventTime[10:12], invite200OKMsg.EventTime[12:])
 	connectTimeStamp, _ := time.ParseInLocation("2006-01-02 15:04:05", timeConnect, time.Local)
 	cdr.ConnectTime = timeConnect
-	//localConnect = time.Unix(timeConnect, 0).Format("2006-01-02 15:04:05")
 	timeDisconnect := fmt.Sprintf("%s-%s-%s %s:%s:%s", bye200OKMsg.EventTime[0:4], bye200OKMsg.EventTime[4:6],
 		bye200OKMsg.EventTime[6:8], bye200OKMsg.EventTime[8:10], bye200OKMsg.EventTime[10:12], bye200OKMsg.EventTime[12:])
-	fmt.Println(timeConnect, timeDisconnect)
 	disconnectTimeStamp, _ := time.ParseInLocation("2006-01-02 15:04:05", timeDisconnect, time.Local)
 	cdr.DisconnectTime = timeDisconnect
 	cdr.Duration = int(disconnectTimeStamp.Sub(connectTimeStamp).Seconds())
 	cdr.FraudType = ""
-	fmt.Println("time:", invite200OKMsg.EventTime, bye200OKMsg.EventTime, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
 
 	jsonStr, _ := json.Marshal(&cdr)
-	fmt.Println(string(jsonStr))
+	log.Debug(string(jsonStr))
 	dao.InsertCDR(&cdr)
-	fmt.Println("insert success")
+	log.Debug("insert success")
 
 	return &cdr
 

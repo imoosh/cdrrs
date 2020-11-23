@@ -105,7 +105,7 @@ func InsertCDR(cdr *VoipRestoredCdr) {
 	sql := fmt.Sprintf("insert into voip_restored_cdr (call_id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration)values(\"%s\",\"%s\",%d,\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d)",
 		cdr.CallId, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
 		cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
-	fmt.Println(sql)
+	log.Debug(sql)
 	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
 		log.Error(err)
