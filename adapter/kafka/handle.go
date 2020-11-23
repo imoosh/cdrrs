@@ -2,9 +2,8 @@ package kafka
 
 import (
 	"centnet-cdrrs/adapter/kafka/file"
-	"centnet-cdrrs/cdr"
-	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
+	"centnet-cdrrs/model"
 	"centnet-cdrrs/prot/sip"
 	"encoding/json"
 	"strconv"
@@ -33,7 +32,7 @@ func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 	rtd := file.Parse(string(value.([]byte)))
 	sipMsg := sip.Parse([]byte(rtd.ParamContent))
 
-	pkt := dao.SipAnalyticPacket{
+	pkt := model.SipAnalyticPacket{
 		EventId:       rtd.EventId,
 		EventTime:     rtd.EventTime,
 		Sip:           rtd.SaddrV4,
@@ -102,16 +101,28 @@ func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 }
 
 func RestoreCDR(consumer *Consumer, key, value interface{}) {
-	cdr.ParseInvite200OKMessage(key, value)
-	cdrPkt := cdr.ParseBye200OKMsg(key, value)
-	jsonStr, err := json.Marshal(cdrPkt)
+
+	var sipMsg model.SipAnalyticPacket
+	err := json.Unmarshal([]byte(value.(string)), &sipMsg)
 	if err != nil {
 		log.Error(err)
-		return
 	}
 
-	log.Debug(jsonStr)
-	consumer.next.Log("", string(jsonStr))
+	if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
+		model.HandleInvite200OKMessage(key.(string), value.(string))
+
+	} else if sipMsg.CseqMethod == "BYE" || sipMsg.ReqStatusCode == 200 {
+		cdrPkt := model.HandleBye200OKMsg(key.(string), sipMsg)
+
+		cdrStr, err := json.Marshal(&cdrPkt)
+		if err != nil {
+			log.Errorf("json.Marshal error: ", err)
+			return
+		}
+
+		consumer.next.Log("", string(cdrStr))
+		log.Debug(cdrStr)
+	}
 }
 
 //func RestoreCDR() {

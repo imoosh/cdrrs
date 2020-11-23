@@ -16,7 +16,7 @@ var pc = ProducerConfig{
 	MaxMessage: 1 << 20,
 }
 
-// Config 配置
+// Conf 配置
 type ProducerConfig struct {
 	Topic      string `xml:"topic"`
 	Broker     string `xml:"broker"`

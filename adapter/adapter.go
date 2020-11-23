@@ -16,7 +16,7 @@ package adapter
 //func NewConsumer(t DataCollectionAdapterType, params interface{}) Consumer {
 //	switch t {
 //	case PacketSnifferAdapter:
-//		return sniffer.NewPacketSniffer(params.(*sniffer.Config))
+//		return sniffer.NewPacketSniffer(params.(*sniffer.Conf))
 //	case FormattedFileAdapter:
 //
 //	case KafkaConsumerAdapter:

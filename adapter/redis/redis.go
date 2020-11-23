@@ -16,6 +16,7 @@ type Config struct {
 
 type Conn struct {
 	conn redis.Conn
+	Conf Config
 }
 
 func NewRedisConn(c *Config) (*Conn, error) {
@@ -24,7 +25,7 @@ func NewRedisConn(c *Config) (*Conn, error) {
 		log.Error(err)
 		return nil, errors.New(fmt.Sprintf("redis.Dial %s failed", c.Host))
 	}
-	return &Conn{conn: conn}, nil
+	return &Conn{conn: conn, Conf: *c}, nil
 }
 
 func (rc *Conn) Close() {
