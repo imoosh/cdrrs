@@ -5,7 +5,7 @@
       <paths name="192.168.1.205">
         <serverdata>
           <mappings>
-            <mapping deploy="/go/src/centnet-cdrrs" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/go/src/centnet-cdrrs-gz" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

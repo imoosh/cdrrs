@@ -94,6 +94,5 @@ func TestParseBye(t *testing.T) {
 	    "userAgent": ""
 	}
 	`
-
 	ParseBye200OKMsg(key, byeOk)
 }

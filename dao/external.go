@@ -25,7 +25,7 @@ func QueryPhonePosition() {
 	pp := new(PhonePosition)
 	var pps []PhonePosition
 
-	n, err := o.QueryTable(pp).Filter("phone", "1892679").All(&pps)
+	n, err := o.QueryTable(pp).All(&pps)
 	if err != nil {
 		log.Error(err)
 		return

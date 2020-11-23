@@ -6,6 +6,7 @@ import (
 	"centnet-cdrrs/model"
 	"centnet-cdrrs/prot/sip"
 	"encoding/json"
+	"fmt"
 	"strconv"
 )
 
@@ -101,13 +102,13 @@ func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 }
 
 func RestoreCDR(consumer *Consumer, key, value interface{}) {
-
 	var sipMsg model.SipAnalyticPacket
-	err := json.Unmarshal([]byte(value.(string)), &sipMsg)
+	//err := json.Unmarshal([]byte(value.(string)), &sipMsg)
+	err := json.Unmarshal(value.([]byte), &sipMsg)
 	if err != nil {
 		log.Error(err)
 	}
-
+	fmt.Println(sipMsg.CseqMethod, sipMsg.ReqStatusCode)
 	if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
 		model.HandleInvite200OKMessage(key.(string), value.(string))
 
