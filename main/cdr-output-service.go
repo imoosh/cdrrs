@@ -96,8 +96,6 @@ func main() {
 
 	//mock(fraudAnalysisProducer)
 
-	dao.QueryPhonePosition()
-
 	// os signal
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
