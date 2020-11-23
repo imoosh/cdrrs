@@ -47,8 +47,8 @@ func ParseInvite200OKMessage(key, value interface{}) {
 	}
 	if invite200OKMsg.CseqMethod == "INVITE" && invite200OKMsg.ReqStatusCode == 200 {
 		//	invite200OK插入redis
-		//redis.RedisConn.PutWithExpire(key.(string), value.(string), 5)
-		redis.RedisConn.Put(key.(string), value.(string))
+		redis.RedisConn.PutWithExpire(key.(string), value.(string), 5)
+		//redis.RedisConn.Put(key.(string), value.(string))
 		log.Debug("Insert redis ok")
 	}
 }
