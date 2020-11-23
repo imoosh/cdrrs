@@ -111,7 +111,7 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 	if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
 		model.HandleInvite200OKMessage(key.(string), value.(string))
 
-	} else if sipMsg.CseqMethod == "BYE" || sipMsg.ReqStatusCode == 200 {
+	} else if sipMsg.CseqMethod == "BYE" && sipMsg.ReqStatusCode == 200 {
 		cdrPkt := model.HandleBye200OKMsg(key.(string), sipMsg)
 
 		cdrStr, err := json.Marshal(&cdrPkt)
