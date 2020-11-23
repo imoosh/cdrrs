@@ -40,7 +40,7 @@ var DefaultConfig = Config{
 
 var Logger = logrus.New()
 
-//func ConfigRotatingFileLogger(c *Config) *logrus.Logger {
+//func ConfigRotatingFileLogger(c *Conf) *logrus.Logger {
 func ConfigRotatingFileLogger(c *Config) {
 	if c != nil {
 		c = &DefaultConfig

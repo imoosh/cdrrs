@@ -5,6 +5,7 @@ import (
 	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/prot/sip"
 	"centnet-cdrrs/prot/udp"
+	"encoding/json"
 	"fmt"
 )
 
@@ -20,7 +21,7 @@ func (data *rawData) String() string {
 	return fmt.Sprintf("%s:%d - %s:%d %s", data.SrcIP, data.SrcPort, data.DstIP, data.DstPort, data.Payload)
 }
 
-func doPacket(data *rawData) {
+func doPacket(ps *PacketSniffer, data *rawData) {
 	sipMsg := sip.Parse(data.Payload)
 	um := dao.UnpackedMessage{
 		UDP: &udp.UdpMsg{
@@ -31,6 +32,11 @@ func doPacket(data *rawData) {
 		},
 		SIP: &sipMsg,
 	}
-	log.Debug(data)
-	dao.InsertSipPacket(&um)
+
+	jsonStr, err := json.Marshal(um)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	ps.producer.Log("", string(jsonStr))
 }

@@ -71,7 +71,7 @@ func main() {
 		log.Error(err)
 		os.Exit(-1)
 	}
-	//kafka.RestoreCDR()
+
 	/* 还原的话单数据交给诈骗分析模型 */
 	fraudAnalysisProducer, err := kafka.NewProducer(conf.Conf.Kafka.FraudModelProducer)
 	if err != nil {

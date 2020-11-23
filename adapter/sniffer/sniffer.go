@@ -2,8 +2,8 @@ package sniffer
 
 import (
 	"bytes"
+	"centnet-cdrrs/adapter/kafka"
 	"centnet-cdrrs/library/log"
-
 	"errors"
 	"fmt"
 	"github.com/google/gopacket"
@@ -26,12 +26,14 @@ type Config struct {
 }
 
 type PacketSniffer struct {
-	config *Config
+	config   *Config
+	producer *kafka.Producer
 }
 
-func NewPacketSniffer(c *Config) *PacketSniffer {
+func NewPacketSniffer(c *Config, producer *kafka.Producer) *PacketSniffer {
 	return &PacketSniffer{
-		config: c,
+		config:   c,
+		producer: producer,
 	}
 }
 
@@ -85,7 +87,7 @@ func (ps *PacketSniffer) Run() error {
 			Payload: udpLayer.Payload,
 		}
 
-		doPacket(data)
+		doPacket(ps, data)
 	}
 
 	return nil
