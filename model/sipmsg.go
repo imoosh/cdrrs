@@ -41,7 +41,7 @@ type SipAnalyticPacket struct {
 func HandleInvite200OKMessage(key, value string) {
 	//	invite200OK插入redis
 	redis.RedisConn.PutWithExpire(key, value, redis.RedisConn.Conf.CacheExpire)
-	log.Debugf("Insert redis ok: %s -- %s", key, value)
+	log.Debugf("Insert redis ok. KEY: %s, VALUE: ...", key)
 }
 
 func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipRestoredCdr {
@@ -53,7 +53,7 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 		// 未获取到数据
 		return nil
 	} else if err != nil {
-		log.Error("get invite200ok failed")
+		log.Error("redis.RedisConn.Get failed")
 		return nil
 	}
 
