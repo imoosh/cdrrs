@@ -190,16 +190,16 @@ func (c *consumerGroupHandler) Cleanup(session sarama.ConsumerGroupSession) erro
 
 func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	count := 0
-	picker := time.NewTicker(time.Second)
-
-	go func() {
-		for {
-			select {
-			case t := <-picker.C:
-				log.Debug(t.Format("2006-01-02 15:04:05.000000"), claim.Partition(), count)
-			}
-		}
-	}()
+	//picker := time.NewTicker(time.Second)
+	//
+	//go func() {
+	//	for {
+	//		select {
+	//		case t := <-picker.C:
+	//			log.Debug(t.Format("2006-01-02 15:04:05.000000"), claim.Partition(), count)
+	//		}
+	//	}
+	//}()
 
 	for msg := range claim.Messages() {
 		count++

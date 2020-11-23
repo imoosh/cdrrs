@@ -2,11 +2,9 @@ package dao
 
 import (
 	"centnet-cdrrs/library/log"
-	"encoding/json"
 	"errors"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
-	"strconv"
 	"time"
 )
 
@@ -47,22 +45,24 @@ type SipAnalyticPacket struct {
 }
 
 type VoipRestoredCdr struct {
-	Id             int64     `json:"id"`
-	CallId         string    `json:"callId"`
-	CallerIp       string    `json:"callerIp"`
-	CallerPort     int       `json:"callerPort"`
-	CalleeIp       string    `json:"calleeIp"`
-	CalleePort     int       `json:"calleePort"`
-	CallerNum      string    `json:"callerNum"`
-	CalleeNum      string    `json:"calleeNum"`
-	CallerDevice   string    `json:"callerDevice"`
-	CalleeDevice   string    `json:"calleeDevice"`
-	CalleeProvince string    `json:"calleeProvince"`
-	CalleeCity     string    `json:"calleeCity"`
-	ConnectTime    time.Time `json:"connectTime"`
-	DisconnectTime time.Time `json:"disconnectTime"`
-	Duration       int       `json:"duration"`
-	FraudType      string    `json:"fraudType"`
+	Id             int64  `json:"id"`
+	CallId         string `json:"callId"`
+	CallerIp       string `json:"callerIp"`
+	CallerPort     int    `json:"callerPort"`
+	CalleeIp       string `json:"calleeIp"`
+	CalleePort     int    `json:"calleePort"`
+	CallerNum      string `json:"callerNum"`
+	CalleeNum      string `json:"calleeNum"`
+	CallerDevice   string `json:"callerDevice"`
+	CalleeDevice   string `json:"calleeDevice"`
+	CalleeProvince string `json:"calleeProvince"`
+	CalleeCity     string `json:"calleeCity"`
+	//ConnectTime    time.Time `json:"connectTime"`
+	//DisconnectTime time.Time `json:"disconnectTime"`
+	ConnectTime    string `json:"connectTime"`
+	DisconnectTime string `json:"disconnectTime"`
+	Duration       int    `json:"duration"`
+	FraudType      string `json:"fraudType"`
 }
 
 type PhonePosition struct {
@@ -86,22 +86,22 @@ type DateTime time.Time
 //	return []byte(stamp), nil
 //}
 
-func (t DateTime) MarshalJSON() ([]byte, error) {
-	return ([]byte)(strconv.FormatInt(time.Time(t).Unix(), 10)), nil
-}
-
-func (cdr VoipRestoredCdr) MarshalJSON() ([]byte, error) {
-	type TmpJSON VoipRestoredCdr
-	return json.Marshal(&struct {
-		TmpJSON
-		ConnectTime    DateTime `json:"connectTime"`
-		DisconnectTime DateTime `json:"disconnectTime"`
-	}{
-		TmpJSON:        (TmpJSON)(cdr),
-		ConnectTime:    DateTime(cdr.ConnectTime),
-		DisconnectTime: DateTime(cdr.DisconnectTime),
-	})
-}
+//func (t DateTime) MarshalJSON() ([]byte, error) {
+//	return ([]byte)(strconv.FormatInt(time.Time(t).Unix(), 10)), nil
+//}
+//
+//func (cdr VoipRestoredCdr) MarshalJSON() ([]byte, error) {
+//	type TmpJSON VoipRestoredCdr
+//	return json.Marshal(&struct {
+//		TmpJSON
+//		ConnectTime    DateTime `json:"connectTime"`
+//		DisconnectTime DateTime `json:"disconnectTime"`
+//	}{
+//		TmpJSON:        (TmpJSON)(cdr),
+//		ConnectTime:    DateTime(cdr.ConnectTime),
+//		DisconnectTime: DateTime(cdr.DisconnectTime),
+//	})
+//}
 
 func Init(c *Config) error {
 	//orm.Debug = true

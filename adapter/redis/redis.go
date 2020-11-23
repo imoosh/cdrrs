@@ -33,7 +33,8 @@ func (rc *Conn) Close() {
 
 func (rc *Conn) Put(k, v string) {
 	if _, err := rc.conn.Do("SET", k, v); err != nil {
-		log.Error(err)
+		fmt.Println(err)
+		//log.Error(err)
 	}
 }
 

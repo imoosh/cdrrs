@@ -25,75 +25,75 @@ import (
 //	}
 //}
 
-func TestParseInvite(t *testing.T) {
-	key := "04ab01e2d142787@192.168.6.24"
-
-	inviteok := []byte(`
+func TestParseInvite200OKMessage(t *testing.T) {
+	key := `04ab01e2d142787@192.168.6.24`
+	inviteok := `
 	{
-		"event_id": "10020044170",
-  		"event_time": "20201111100820",
-  		"sip": "219.143.187.139",
-  		"sport": "5088",
-  		"dip": "192.168.6.24",
-  		"dport": "5060",
-  		"call_id": "04ab01e2d142787@192.168.6.24",
-	    "cseq_method": "INVITE",
-	    "req_method": "",
-	    "req_status_code": "200",
-	    "req_user": "018926798345",
-	    "req_host": "219.143.187.139",
-	    "req_port": "5060",
-	    "from_name": "1101385",
-	    "from_user": "1101385",
-	    "from_host": "192.168.6.24",
-	    "from_port": "5060",
-	    "to_name": "",
-	    "to_user": "018926798345",
-	    "to_host": "219.143.187.139",
-	    "to_port": "5060",
-	    "contact_name": "1101385",
-	    "contact_user": "1101385",
-	    "contact_host": "192.168.6.24",
-	    "contact_port": "5060",
-	    "user_agent": "DonJin SIP Server 3.2.0_i"
+	"id":10000,
+    "eventId":"10020044170",
+    "eventTime":"20201111100820",
+    "sip":"219.143.187.139",
+    "sport":5088,
+    "dip":"192.168.6.24",
+    "dport":5060,
+    "callId":"04ab01e2d142787@192.168.6.24",
+    "cseqMethod":"INVITE",
+    "reqMethod":" ",
+    "reqStatusCode":200,
+    "reqUser":"018926798345",
+    "reqHost":"219.143.187.139",
+    "reqPort":5060,
+    "fromName":"1101385",
+    "fromUser":"1101385",
+    "fromHost":"192.168.6.24",
+    "fromPort":5060,
+    "toName":" ",
+    "toUser":"018926798345",
+    "toHost":"219.143.187.139",
+    "toPort":5060,
+    "contactName":"1101385",
+    "contactUser":"1101385",
+    "contactHost":"192.168.6.24",
+    "contactPort":5060,
+    "userAgent":"DonJin SIP Server 3.2.0_i"
 	}
-	`)
-
-	ParseInvite200OKMessage([]byte(key), inviteok)
+	`
+	ParseInvite200OKMessage(key, inviteok)
 }
 
 func TestParseBye(t *testing.T) {
-	key := "04ab01e2d142787@192.168.6.24"
-	byeOk := []byte(`
+	key := `04ab01e2d142787@192.168.6.24`
+	byeOk := `
 	{
-		"event_id": "10020044170",
-	  	"event_time": "20201111100903",
-	  	"sip": "219.143.187.139",
-	    "sport": "5088",
-	    "dip": "192.168.6.24",
-	    "dport": "5060",
-	    "call_id": "04ab01e2d142787@192.168.6.24",
-	    "cseq_method": "BYE",
-	    "req_method": "",
-	    "req_status_code": "200",
-	    "req_user": "",
-	    "req_host": "",
-	    "req_port": "5060",
-	    "from_name": "1101385",
-	    "from_user": "1101385",
-	    "from_host": "192.168.6.24",
-	    "from_port": "5060",
-	    "to_name": "",
-	    "to_user": "018926798345",
-	    "to_host": "219.143.187.139",
-	    "to_port": "5060",
-	    "contact_name": "1101385",
-	    "contact_user": "1101385",
-	    "contact_host": "192.168.6.24",
-	    "contact_port": "5060",
-	    "user_agent": ""
+	"id":10000,
+	"eventId": "10020044170",
+	"eventTime": "20201111100903",
+	"sip": "219.143.187.139",
+	"sport": 5088,
+	"dip": "192.168.6.24",
+	"dport": 5060,
+	"callId": "04ab01e2d142787@192.168.6.24",
+	"cseqMethod": "BYE",
+	"cseqMethod": "",
+	    "reqStatusCode": 200,
+	    "reqUser": "",
+	    "reqHost": "",
+	    "reqPort": 5060,
+	    "fromName": "1101385",
+	    "fromUser": "1101385",
+	    "fromHost": "192.168.6.24",
+	    "fromPort": 5060,
+	    "toName": "",
+	    "toUser": "018926798345",
+	    "toHost": "219.143.187.139",
+	    "toPort": "5060",
+	    "contactName": "1101385",
+	    "contactUser": "1101385",
+	    "contactHost": "192.168.6.24",
+	    "contactPort": "5060",
+	    "userAgent": ""
 	}
-	`)
+	`
 
-	ParseBye200OKMsg([]byte(key), byeOk)
+	ParseBye200OKMsg(key, byeOk)
 }

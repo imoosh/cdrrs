@@ -26,7 +26,7 @@ func QueryPhonePosition() {
 	pp := new(PhonePosition)
 	var pps []PhonePosition
 
-	n, err := o.QueryTable(pp).Filter("phone", "1811300").All(&pps)
+	n, err := o.QueryTable(pp).Filter("phone", "1892679").All(&pps)
 	if err != nil {
 		log.Error(err)
 		return
@@ -39,12 +39,12 @@ func QueryPhonePosition() {
 }
 
 func GetPositionByPhoneNum(phone string) PhonePosition {
-	if len(phone) != 11 {
+	if len(phone) != 12 {
 		log.Error("invalid phone number:", phone)
 		return PhonePosition{}
 	}
 
-	if pp, ok := phonePositionMap[phone[0:7]]; ok {
+	if pp, ok := phonePositionMap[phone[1:8]]; ok {
 		return pp.(PhonePosition)
 	}
 	return PhonePosition{}
@@ -101,34 +101,11 @@ func InsertSipPacket(msg *UnpackedMessage) {
 	}
 }
 
-//func InsertCDR(cdr VoipRestoredCdr) {
-//	o := orm.NewOrm()
-//	_, err := o.Insert(&cdr)
-//	if err != nil {
-//		log.Error(err)
-//	}
-//}
-
-func GetCalleeAttribution(inviteData *SipAnalyticPacket) (province, city string) {
-	sql := fmt.Sprintf("SELECT province,city FROM (SELECT to_user FROM sip_analytic_packet WHERE cseq_method = \"INVITE\" AND req_status_code = \"200\" AND call_id = %s) AS a LEFT JOIN phone_position b ON SUBSTR(a.to_user,2,7) = b.phone", inviteData.CallId)
-	attribution := new(Attribution)
-	err := orm.NewOrm().Raw(sql).QueryRow(&attribution)
-	if err != nil {
-		province = ""
-		city = ""
-		log.Error(err)
-		return
-	}
-
-	province = attribution.province
-	city = attribution.city
-	return
-}
-
 func InsertCDR(cdr *VoipRestoredCdr) {
-	sql := fmt.Sprintf("insert into voip_restored_cdr (%s,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%d)", cdr.CallId, cdr.CallerIp, cdr.CallerPort,
-		cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice, cdr.CalleeDevice, cdr.CalleeProvince,
-		cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
+	sql := fmt.Sprintf("insert into voip_restored_cdr (call_id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration)values(\"%s\",\"%s\",%d,\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d)",
+		cdr.CallId, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
+		cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
+	fmt.Println(sql)
 	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
 		log.Error(err)

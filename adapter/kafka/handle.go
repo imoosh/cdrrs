@@ -101,85 +101,9 @@ func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 	consumer.next.Log("", string(jsonStr))
 }
 
-//func RestoreCDR(consumer *Consumer, key, value interface{}) {
-//	cdr.ParseInvite200OKMessage(key.([]byte), value.([]byte))
-//	cdrPkt := cdr.ParseBye200OKMsg(key.([]byte), value.([]byte))
-//	jsonStr, err := json.Marshal(cdrPkt)
-//	if err != nil {
-//		log.Error(err)
-//		return
-//	}
-//
-//	log.Debug(jsonStr)
-//	consumer.next.Log("", string(jsonStr))
-//}
-
 func RestoreCDR(consumer *Consumer, key, value interface{}) {
-
-	callid := "04ab01e2d142787@192.168.6.24"
-	inviteOk := []byte(`
-	{
-		"event_id": "10020044170",
-  		"event_time": "20201111100820",
-  		"sip": "219.143.187.139",
-  		"sport": "5088",
-  		"dip": "192.168.6.24",
-  		"dport": "5060",
-  		"call_id": "04ab01e2d142787@192.168.6.24",
-	    "cseq_method": "INVITE",
-	    "req_method": "",
-	    "req_status_code": "200",
-	    "req_user": "018926798345",
-	    "req_host": "219.143.187.139",
-	    "req_port": "5060",
-	    "from_name": "1101385",
-	    "from_user": "1101385",
-	    "from_host": "192.168.6.24",
-	    "from_port": "5060",
-	    "to_name": "",
-	    "to_user": "018926798345",
-	    "to_host": "219.143.187.139",
-	    "to_port": "5060",
-	    "contact_name": "1101385",
-	    "contact_user": "1101385",
-	    "contact_host": "192.168.6.24",
-	    "contact_port": "5060",
-	    "user_agent": "DonJin SIP Server 3.2.0_i"
-	}
-	`)
-	byeOk := []byte(`
-	{
-		"event_id": "10020044170",
-	  	"event_time": "20201111100903",
-	  	"sip": "219.143.187.139",
-	    "sport": "5088",
-	    "dip": "192.168.6.24",
-	    "dport": "5060",
-	    "call_id": "04ab01e2d142787@192.168.6.24",
-	    "cseq_method": "BYE",
-	    "req_method": "",
-	    "req_status_code": "200",
-	    "req_user": "",
-	    "req_host": "",
-	    "req_port": "5060",
-	    "from_name": "1101385",
-	    "from_user": "1101385",
-	    "from_host": "192.168.6.24",
-	    "from_port": "5060",
-	    "to_name": "",
-	    "to_user": "018926798345",
-	    "to_host": "219.143.187.139",
-	    "to_port": "5060",
-	    "contact_name": "1101385",
-	    "contact_user": "1101385",
-	    "contact_host": "192.168.6.24",
-	    "contact_port": "5060",
-	    "user_agent": ""
-	}
-	`)
-
-	cdr.ParseInvite200OKMessage([]byte(callid), inviteOk)
-	cdrPkt := cdr.ParseBye200OKMsg([]byte(callid), byeOk)
+	cdr.ParseInvite200OKMessage(key, value)
+	cdrPkt := cdr.ParseBye200OKMsg(key, value)
 	jsonStr, err := json.Marshal(cdrPkt)
 	if err != nil {
 		log.Error(err)
@@ -187,5 +111,74 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 	}
 
 	log.Debug(jsonStr)
-	//consumer.next.Log("", string(jsonStr))
+	consumer.next.Log("", string(jsonStr))
 }
+
+//func RestoreCDR() {
+//	callid := `04ab01e2d142787@192.168.6.24`
+//	inviteok := `
+//	{
+//	"id":10000,
+//    "eventId":"10020044170",
+//    "eventTime":"20201111100820",
+//    "sip":"219.143.187.139",
+//    "sport":5088,
+//    "dip":"192.168.6.24",
+//    "dport":5060,
+//    "callId":"04ab01e2d142787@192.168.6.24",
+//    "cseqMethod":"INVITE",
+//    "reqMethod":" ",
+//    "reqStatusCode":200,
+//    "reqUser":"018926798345",
+//    "reqHost":"219.143.187.139",
+//    "reqPort":5060,
+//    "fromName":"1101385",
+//    "fromUser":"1101385",
+//    "fromHost":"192.168.6.24",
+//    "fromPort":5060,
+//    "toName":" ",
+//    "toUser":"018926798345",
+//    "toHost":"219.143.187.139",
+//    "toPort":5060,
+//    "contactName":"1101385",
+//    "contactUser":"1101385",
+//    "contactHost":"192.168.6.24",
+//    "contactPort":5060,
+//    "userAgent":"DonJin SIP Server 3.2.0_i"
+//	}
+//	`
+//	cdr.ParseInvite200OKMessage(callid, inviteok)
+//	call := `04ab01e2d142787@192.168.6.24`
+//	byeOk := `
+//	{
+//	"id":10000,
+//	"eventId":"10020044170",
+//	"eventTime":"20201111100903",
+//	"sip":"219.143.187.139",
+//	"sport":5088,
+//	"dip":"192.168.6.24",
+//	"dport":5060,
+//	"callId":"04ab01e2d142787@192.168.6.24",
+//	"cseqMethod":"BYE",
+//	"reqMethod":"100",
+//	"reqStatusCode":200,
+//	"reqUser":"",
+//	"reqHost":"",
+//	"reqPort":5060,
+//	"fromName":"1101385",
+//	"fromUser":"1101385",
+//	"fromHost":"192.168.6.24",
+//	"fromPort":5060,
+//	"toName":"",
+//	"toUser":"018926798345",
+//	"toHost":"219.143.187.139",
+//	"toPort":"5060",
+//	"contactName":"1101385",
+//	"contactUser":"1101385",
+//	"contactHost":"192.168.6.24",
+//	"contactPort":"5060",
+//	"userAgent":""
+//	}`
+//	//time.Sleep(time.Duration(6) * time.Second)
+//	cdr.ParseBye200OKMsg(call, byeOk)
+//}
