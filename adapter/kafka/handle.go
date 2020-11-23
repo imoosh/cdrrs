@@ -1,136 +1,149 @@
 package kafka
 
 import (
-	"centnet-cdrrs/adapter/kafka/file"
-	"centnet-cdrrs/library/log"
-	"centnet-cdrrs/model"
-	"centnet-cdrrs/prot/sip"
-	"encoding/json"
-	"strconv"
+    "centnet-cdrrs/adapter/kafka/file"
+    "centnet-cdrrs/library/log"
+    "centnet-cdrrs/model"
+    "centnet-cdrrs/prot/sip"
+    "encoding/json"
+    "strconv"
 )
 
 type Config struct {
-	/* 原始数据包缓存配置 */
-	SipPacketProducer *ProducerConfig
+    /* 原始数据包缓存配置 */
+    SipPacketProducer *ProducerConfig
 
-	/* 原始数据包读取配置 */
-	SipPacketConsumer *ConsumerConfig
+    /* 原始数据包读取配置 */
+    SipPacketConsumer *ConsumerConfig
 
-	/* 解析的数据包缓存配置 */
-	RestoreCDRProducer *ProducerConfig
+    /* 解析的数据包缓存配置 */
+    RestoreCDRProducer *ProducerConfig
 
-	/* 解析的数据包读取配置 */
-	RestoreCDRConsumer *ConsumerConfig
+    /* 解析的数据包读取配置 */
+    RestoreCDRConsumer *ConsumerConfig
 
-	/* 话单数据推送配置 */
-	FraudModelProducer *ProducerConfig
+    /* 话单数据推送配置 */
+    FraudModelProducer *ProducerConfig
 }
 
 func atoi(s string, n int) (int, error) {
-	if len(s) == 0 {
-		return n, nil
-	}
+    if len(s) == 0 {
+        return n, nil
+    }
 
-	return strconv.Atoi(s)
+    return strconv.Atoi(s)
 }
 
 // 解析sip报文
 func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 
-	rtd := file.Parse(string(value.([]byte)))
-	sipMsg := sip.Parse([]byte(rtd.ParamContent))
+    rtd := file.Parse(string(value.([]byte)))
+    if rtd == nil {
+        return
+    }
+    sipMsg := sip.Parse([]byte(rtd.ParamContent))
 
-	pkt := model.SipAnalyticPacket{
-		EventId:       rtd.EventId,
-		EventTime:     rtd.EventTime,
-		Sip:           rtd.SaddrV4,
-		Sport:         0,
-		Dip:           rtd.DaddrV4,
-		Dport:         0,
-		CallId:        string(sipMsg.CallId.Value),
-		CseqMethod:    string(sipMsg.Req.Method),
-		ReqMethod:     string(sipMsg.Cseq.Method),
-		ReqStatusCode: 0,
-		ReqUser:       string(sipMsg.Req.User),
-		ReqHost:       string(sipMsg.Req.Host),
-		ReqPort:       0,
-		FromName:      string(sipMsg.From.Name),
-		FromUser:      string(sipMsg.From.User),
-		FromHost:      string(sipMsg.From.Host),
-		FromPort:      0,
-		ToName:        string(sipMsg.To.Name),
-		ToUser:        string(sipMsg.To.User),
-		ToHost:        string(sipMsg.To.Host),
-		ToPort:        0,
-		ContactName:   string(sipMsg.Contact.Name),
-		ContactUser:   string(sipMsg.Contact.User),
-		ContactHost:   string(sipMsg.Contact.Host),
-		ContactPort:   0,
-		UserAgent:     string(sipMsg.Ua.Value),
-	}
+    log.Debug("################", sipMsg.Req.StatusCode, ", ", sipMsg.Cseq.Method, ", ", sipMsg.Req.StatusCode)
 
-	var err error
-	if pkt.Sport, err = atoi(rtd.Sport, 0); err != nil {
-		log.Errorf("cannot convert %s to an integer: %v", rtd.Sport, rtd)
-		return
-	}
-	if pkt.Dport, err = atoi(rtd.Dport, 0); err != nil {
-		log.Errorf("cannot convert %s to an integer", rtd.Dport)
-		return
-	}
-	if pkt.ReqStatusCode, err = atoi(string(sipMsg.Req.StatusCode), 0); err != nil {
-		log.Errorf("cannot convert %s to an integer", sipMsg.Req.StatusCode)
-		return
-	}
-	if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
-		log.Errorf("cannot convert %s to an integer", sipMsg.Req.Port)
-		return
-	}
-	if pkt.FromPort, err = atoi(string(sipMsg.From.Port), 5060); err != nil {
-		log.Errorf("cannot convert %s to an integer", sipMsg.From.Port)
-		return
-	}
-	if pkt.ToPort, err = atoi(string(sipMsg.To.Port), 5060); err != nil {
-		log.Errorf("cannot convert %s to an integer", sipMsg.To.Port)
-		return
-	}
-	if pkt.ContactPort, err = atoi(string(sipMsg.Contact.Port), 5060); err != nil {
-		log.Errorf("cannot convert %s to an integer", sipMsg.Contact.Port)
-		return
-	}
+    //sip.PrintSipStruct(&sipMsg)
 
-	jsonStr, err := json.Marshal(pkt)
-	if err != nil {
-		log.Error(err)
-		return
-	}
+    pkt := model.SipAnalyticPacket{
+        EventId:       rtd.EventId,
+        EventTime:     rtd.EventTime,
+        Sip:           rtd.SaddrV4,
+        Sport:         0,
+        Dip:           rtd.DaddrV4,
+        Dport:         0,
+        CallId:        string(sipMsg.CallId.Value),
+        CseqMethod:    string(sipMsg.Cseq.Method),
+        ReqMethod:     string(sipMsg.Req.Method),
+        ReqStatusCode: 0,
+        ReqUser:       string(sipMsg.Req.User),
+        ReqHost:       string(sipMsg.Req.Host),
+        ReqPort:       0,
+        FromName:      string(sipMsg.From.Name),
+        FromUser:      string(sipMsg.From.User),
+        FromHost:      string(sipMsg.From.Host),
+        FromPort:      0,
+        ToName:        string(sipMsg.To.Name),
+        ToUser:        string(sipMsg.To.User),
+        ToHost:        string(sipMsg.To.Host),
+        ToPort:        0,
+        ContactName:   string(sipMsg.Contact.Name),
+        ContactUser:   string(sipMsg.Contact.User),
+        ContactHost:   string(sipMsg.Contact.Host),
+        ContactPort:   0,
+        UserAgent:     string(sipMsg.Ua.Value),
+    }
 
-	consumer.next.Log("", string(jsonStr))
+    var err error
+    if pkt.Sport, err = atoi(rtd.Sport, 0); err != nil {
+        log.Errorf("cannot convert %s to an integer: %v", rtd.Sport, rtd)
+        return
+    }
+    if pkt.Dport, err = atoi(rtd.Dport, 0); err != nil {
+        log.Errorf("cannot convert %s to an integer", rtd.Dport)
+        return
+    }
+    if pkt.ReqStatusCode, err = atoi(string(sipMsg.Req.StatusCode), 0); err != nil {
+        log.Errorf("cannot convert %s to an integer", sipMsg.Req.StatusCode)
+        return
+    }
+    if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
+        log.Errorf("cannot convert %s to an integer", sipMsg.Req.Port)
+        return
+    }
+    if pkt.FromPort, err = atoi(string(sipMsg.From.Port), 5060); err != nil {
+        log.Errorf("cannot convert %s to an integer", sipMsg.From.Port)
+        return
+    }
+    if pkt.ToPort, err = atoi(string(sipMsg.To.Port), 5060); err != nil {
+        log.Errorf("cannot convert %s to an integer", sipMsg.To.Port)
+        return
+    }
+    if pkt.ContactPort, err = atoi(string(sipMsg.Contact.Port), 5060); err != nil {
+        log.Errorf("cannot convert %s to an integer", sipMsg.Contact.Port)
+        return
+    }
+
+    jsonStr, err := json.Marshal(pkt)
+    if err != nil {
+        log.Error(err)
+        return
+    }
+
+    consumer.next.Log(string(sipMsg.CallId.Value), string(jsonStr))
 }
 
 func RestoreCDR(consumer *Consumer, key, value interface{}) {
 
-	var sipMsg model.SipAnalyticPacket
-	err := json.Unmarshal([]byte(value.(string)), &sipMsg)
-	if err != nil {
-		log.Error(err)
-	}
+    var sipMsg model.SipAnalyticPacket
+    err := json.Unmarshal(value.([]byte), &sipMsg)
+    if err != nil {
+        log.Error(err)
+        return
+    }
 
-	if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
-		model.HandleInvite200OKMessage(key.(string), value.(string))
+    k, v := string(key.([]byte)), string(value.([]byte))
+    log.Debug("KEY: ", k, ", SIPMSG: ", sipMsg)
 
-	} else if sipMsg.CseqMethod == "BYE" && sipMsg.ReqStatusCode == 200 {
-		cdrPkt := model.HandleBye200OKMsg(key.(string), sipMsg)
+    if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
+        model.HandleInvite200OKMessage(k, v)
 
-		cdrStr, err := json.Marshal(&cdrPkt)
-		if err != nil {
-			log.Errorf("json.Marshal error: ", err)
-			return
-		}
+    } else if sipMsg.CseqMethod == "BYE" && sipMsg.ReqStatusCode == 200 {
+        cdrPkt := model.HandleBye200OKMsg(k, sipMsg)
 
-		consumer.next.Log("", string(cdrStr))
-		log.Debug(cdrStr)
-	}
+        cdrStr, err := json.Marshal(&cdrPkt)
+        if err != nil {
+            log.Errorf("json.Marshal error: ", err)
+            return
+        }
+
+        consumer.next.Log("", string(cdrStr))
+        log.Debug(cdrStr)
+    } else {
+        log.Debug("no handler for else condition")
+    }
 }
 
 //func RestoreCDR() {

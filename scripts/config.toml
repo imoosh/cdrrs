@@ -60,4 +60,9 @@
 
 [redis]
     host = "192.168.1.205:6379"
+    password = ""
+    database = ""
+    connTimeout = 3
+    readTimeout = 3
+    writeTimeout = 3
     cacheExpire = 3600

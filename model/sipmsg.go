@@ -48,8 +48,11 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 	var err error
 
 	//根据BYE 200OK包的call_id从redis获取对应的INVITE 200OK的包
-	invite200OKRawMsg, notGet := redis.RedisConn.Get(key)
-	if notGet != nil {
+	invite200OKRawMsg, err := redis.RedisConn.Get(key)
+	if err == nil && invite200OKRawMsg == "" {
+		// 未获取到数据
+		return nil
+	} else if err != nil {
 		log.Error("get invite200ok failed")
 		return nil
 	}
@@ -65,12 +68,14 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 
 	//获取被叫归属地
 	calleeAttribution := dao.GetPositionByPhoneNum(invite200OKMsg.ToUser)
-	connectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
+	connectTime, err := time.Parse("20060102150405", invite200OKMsg.EventTime)
+	//connectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
 	if err != nil {
 		log.Errorf("time.Parse error: %s", invite200OKMsg.EventTime)
 		return nil
 	}
-	disconnectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
+	disconnectTime, err := time.Parse("20060102150405", invite200OKMsg.EventTime)
+	//disconnectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
 	if err != nil {
 		log.Errorf("time.Parse error: %s", invite200OKMsg.EventTime)
 		return nil
