@@ -1,13 +1,6 @@
 package cdr
 
 import (
-	"centnet-cdrrs/adapter/redis"
-	"centnet-cdrrs/conf"
-	"centnet-cdrrs/dao"
-	"centnet-cdrrs/library/log"
-	"time"
-
-	"encoding/json"
 	_ "github.com/go-sql-driver/mysql"
 	//"strconv"
 )
