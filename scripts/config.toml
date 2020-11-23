@@ -25,7 +25,7 @@
         replication = 1
         group = "AnalyticCluster"
         version = "2.0.0"
-        numRoutine = 4
+        numRoutine = 1
 
     # 待还原话单数据生产者
     [kafka.restoreCDRProducer]

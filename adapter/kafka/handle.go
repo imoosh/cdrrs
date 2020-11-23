@@ -27,6 +27,14 @@ type Config struct {
 	FraudModelProducer *ProducerConfig
 }
 
+func atoi(s string, n int) (int, error) {
+	if len(s) == 0 {
+		return n, nil
+	}
+
+	return strconv.Atoi(s)
+}
+
 // 解析sip报文
 func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 
@@ -63,31 +71,31 @@ func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 	}
 
 	var err error
-	if pkt.Sport, err = strconv.Atoi(rtd.Sport); err != nil {
-		log.Errorf("cannot convert %s to an integer", rtd.Sport)
+	if pkt.Sport, err = atoi(rtd.Sport, 0); err != nil {
+		log.Errorf("cannot convert %s to an integer: %v", rtd.Sport, rtd)
 		return
 	}
-	if pkt.Dport, err = strconv.Atoi(rtd.Dport); err != nil {
+	if pkt.Dport, err = atoi(rtd.Dport, 0); err != nil {
 		log.Errorf("cannot convert %s to an integer", rtd.Dport)
 		return
 	}
-	if pkt.ReqStatusCode, err = strconv.Atoi(string(sipMsg.Req.StatusCode)); err != nil {
+	if pkt.ReqStatusCode, err = atoi(string(sipMsg.Req.StatusCode), 0); err != nil {
 		log.Errorf("cannot convert %s to an integer", sipMsg.Req.StatusCode)
 		return
 	}
-	if pkt.ReqPort, err = strconv.Atoi(string(sipMsg.Req.Port)); err != nil {
+	if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
 		log.Errorf("cannot convert %s to an integer", sipMsg.Req.Port)
 		return
 	}
-	if pkt.FromPort, err = strconv.Atoi(string(sipMsg.From.Port)); err != nil {
+	if pkt.FromPort, err = atoi(string(sipMsg.From.Port), 5060); err != nil {
 		log.Errorf("cannot convert %s to an integer", sipMsg.From.Port)
 		return
 	}
-	if pkt.ToPort, err = strconv.Atoi(string(sipMsg.To.Port)); err != nil {
+	if pkt.ToPort, err = atoi(string(sipMsg.To.Port), 5060); err != nil {
 		log.Errorf("cannot convert %s to an integer", sipMsg.To.Port)
 		return
 	}
-	if pkt.ContactPort, err = strconv.Atoi(string(sipMsg.Contact.Port)); err != nil {
+	if pkt.ContactPort, err = atoi(string(sipMsg.Contact.Port), 5060); err != nil {
 		log.Errorf("cannot convert %s to an integer", sipMsg.Contact.Port)
 		return
 	}

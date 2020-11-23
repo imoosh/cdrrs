@@ -76,7 +76,7 @@ func main() {
 	var byeMessage = `Status-Line: SIP/2.0 200 OK\0D\0AFrom: ""1101385""<sip:1101385@192.168.6.24;user=phone>;tag=04ab01e2d14221470\0D\0ATo: <sip:018926798345@219.143.187.139;user=phone>;tag=b0520e20-0-13e0-67e6bb-76fea845-67e6bb\0D\0ACall-ID: 04ab01e2d142787@192.168.6.24\0D\0A[Generated Call-ID: 04ab01e2d142787@192.168.6.24]\0D\0ACSeq: 18 BYE\0D\0AVia: SIP/2.0/UDP 192.168.6.24:5060;received=116.24.65.63;rport=5060;branch=z9hG4bK9701\0D\0ASupported: 100rel\0D\0AContent-Length: 0\0D\0A`
 	var rawByeMessage = `"20201123120805","10020044201","220.248.118.20","9080","61.220.35.200","8080",` + "\"" + byeMessage + "\""
 
-	const maxSize = 10000
+	const maxSize = 10
 	uuidList := make([]string, maxSize)
 
 	for i := 0; i < maxSize; i++ {
@@ -91,7 +91,7 @@ func main() {
 			}
 		}
 		rawInviteMessage = strings.Join(ss, `\0D\0A`)
-		//producer.Log(uuid, rawInviteMessage)
+		producer.Log(uuidList[i], rawInviteMessage)
 	}
 
 	time.Sleep(time.Second * 5)
@@ -103,7 +103,7 @@ func main() {
 			}
 		}
 		rawByeMessage = strings.Join(ss, `\0D\0A`)
-		//producer.Log(uuid, rawInviteMessage)
+		producer.Log(uuidList[i], rawInviteMessage)
 	}
 
 	fmt.Println("Log Over")
