@@ -57,12 +57,14 @@
 
 [mysql]
     dsn = "root:123456@tcp(192.168.1.205:3306)/centnet_voip?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
+    flushPeriod = 3
+    maxFlushCapacity = 1000
+    maxCacheCapacity = 10000
 
 [redis]
     host = "192.168.1.205:6379"
     password = ""
-    database = ""
-    connTimeout = 3
-    readTimeout = 3
-    writeTimeout = 3
+    idleTimeout = 600
+    maxIdle = 10
+    maxActive = 10000
     cacheExpire = 3600

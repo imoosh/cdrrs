@@ -107,7 +107,7 @@ func (p *Producer) Log(key, value string) {
 
 	select {
 	case p.msgQ <- msg:
-		log.Debug("[producer]", "KEY: ", key, ", VALUE: ...")
+		//log.Debug("[producer]", "KEY: ", key, ", VALUE: ...")
 		return
 	default:
 		log.Debug("[producer] err=[msgQ is full] key=[%s] val=[%s]", msg.Key, msg.Value)

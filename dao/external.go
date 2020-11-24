@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"bytes"
 	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/prot/sip"
 	"centnet-cdrrs/prot/udp"
@@ -49,58 +50,6 @@ func GetPositionByPhoneNum(phone string) PhonePosition {
 	return PhonePosition{}
 }
 
-//
-//func InsertSipPacket(msg *UnpackedMessage) {
-//	var sipPacket model.SipAnalyticPacket
-//
-//	sipPacket.EventId = msg.EventId
-//	sipPacket.EventTime = msg.EventTime
-//
-//	sipPacket.Sip = msg.UDP.SrcIP
-//	sipPacket.Sport = msg.UDP.SrcPort
-//	sipPacket.Dip = msg.UDP.DstIP
-//	sipPacket.Dport = msg.UDP.DstPort
-//
-//	sipPacket.CallId = string(msg.SIP.CallId.Value)
-//	sipPacket.ReqMethod = string(msg.SIP.Req.Method)
-//	sipPacket.ReqStatusCode, _ = strconv.Atoi(string(msg.SIP.Req.StatusCode))
-//	sipPacket.ReqUser = string(msg.SIP.Req.User)
-//	sipPacket.ReqHost = string(msg.SIP.Req.Host)
-//	sipPacket.ReqPort, _ = strconv.Atoi(string(msg.SIP.Req.Port))
-//	if sipPacket.ReqPort == 0 {
-//		sipPacket.ReqPort = 5060
-//	}
-//	sipPacket.FromName = string(msg.SIP.From.Name)
-//	sipPacket.FromUser = string(msg.SIP.From.User)
-//	sipPacket.FromHost = string(msg.SIP.From.Host)
-//	sipPacket.FromPort, _ = strconv.Atoi(string(msg.SIP.From.Port))
-//	if sipPacket.FromPort == 0 {
-//		sipPacket.FromPort = 5060
-//	}
-//	sipPacket.ToName = string(msg.SIP.To.Name)
-//	sipPacket.ToUser = string(msg.SIP.To.User)
-//	sipPacket.ToHost = string(msg.SIP.To.Host)
-//	sipPacket.ToPort, _ = strconv.Atoi(string(msg.SIP.To.Port))
-//	if sipPacket.ToPort == 0 {
-//		sipPacket.ToPort = 5060
-//	}
-//	sipPacket.ContactName = string(msg.SIP.Contact.Name)
-//	sipPacket.ContactUser = string(msg.SIP.Contact.User)
-//	sipPacket.ContactHost = string(msg.SIP.Contact.Host)
-//	sipPacket.ContactPort, _ = strconv.Atoi(string(msg.SIP.Contact.Port))
-//	if sipPacket.ContactPort == 0 {
-//		sipPacket.ContactPort = 5060
-//	}
-//	sipPacket.CseqMethod = string(msg.SIP.Cseq.Method)
-//	sipPacket.UserAgent = string(msg.SIP.Ua.Value)
-//
-//	o := orm.NewOrm()
-//	_, err := o.Insert(&sipPacket)
-//	if err != nil {
-//		fmt.Println(err)
-//	}
-//}
-
 func InsertCDR(cdr *VoipRestoredCdr) {
 	sql := fmt.Sprintf("insert into voip_restored_cdr (call_id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration)values(\"%s\",\"%s\",%d,\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d)",
 		cdr.CallId, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
@@ -109,4 +58,32 @@ func InsertCDR(cdr *VoipRestoredCdr) {
 	if err != nil {
 		log.Error(err)
 	}
+}
+
+func MultiInsertCDR(cdrs []*VoipRestoredCdr) {
+	if len(cdrs) == 0 {
+		return
+	}
+
+	log.Debugf("%d CDRs inserted", len(cdrs))
+
+	sql := "INSERT INTO voip_restored_cdr (call_id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration) VALUES "
+	buf := bytes.Buffer{}
+	buf.Write([]byte(sql))
+	for _, cdr := range cdrs {
+		buf.WriteString(fmt.Sprintf(`("%s","%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s","%s","%s",%d),`,
+			cdr.CallId, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
+			cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration))
+	}
+	// 替换最后一个','
+	buf.Bytes()[buf.Len()-1] = ';'
+
+	_, err := orm.NewOrm().Raw(buf.String()).Exec()
+	if err != nil {
+		log.Error(err)
+	}
+}
+
+func LogCDR(cdr *VoipRestoredCdr) {
+	asyncDao.LogCDR(cdr)
 }

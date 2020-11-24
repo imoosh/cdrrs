@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="192.168.1.205">
+  <component name="PublishConfigData" autoUpload="Always" serverName="192.168.1.205" exclude=".svn;.cvs;.idea;.DS_Store;.hg;*.hprof;*.pyc">
     <serverData>
       <paths name="192.168.1.205">
         <serverdata>
           <mappings>
-            <mapping deploy="/go/src/centnet-cdrrs-gz" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/go/src/centnet-cdrrs" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

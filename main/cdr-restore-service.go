@@ -60,7 +60,7 @@ func main() {
 	log.Init(conf.Conf.Logging)
 
 	/* redis初始化 */
-	if err = redis.Init(conf.Conf.Redis); err != nil {
+	if err = redis.InitRedisPool(conf.Conf.Redis); err != nil {
 		log.Error(err)
 		os.Exit(-1)
 	}

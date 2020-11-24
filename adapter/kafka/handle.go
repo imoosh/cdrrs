@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"centnet-cdrrs/adapter/kafka/file"
+	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/model"
 	"centnet-cdrrs/prot/sip"
@@ -35,10 +36,17 @@ func atoi(s string, n int) (int, error) {
 	return strconv.Atoi(s)
 }
 
+var count int
+
 // 解析sip报文
 func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 
-	t := time.Now()
+	count++
+	if count%100000 == 0 {
+		log.Debug(time.Now())
+	}
+
+	//t := time.Now()
 	rtd := file.Parse(string(value.([]byte)))
 	if rtd == nil {
 		return
@@ -113,12 +121,18 @@ func AnalyzePacket(consumer *Consumer, key, value interface{}) {
 	}
 
 	consumer.next.Log(string(sipMsg.CallId.Value), string(jsonStr))
-	log.Debug("AnalyzePacket duration: ", time.Since(t))
+	//log.Debug("AnalyzePacket duration: ", time.Since(t))
 }
+
+var count1 int
 
 func RestoreCDR(consumer *Consumer, key, value interface{}) {
 
-	t := time.Now()
+	count1++
+	if count1%100000 == 0 {
+		log.Debug(time.Now())
+	}
+
 	var sipMsg model.SipAnalyticPacket
 	err := json.Unmarshal(value.([]byte), &sipMsg)
 	if err != nil {
@@ -127,11 +141,10 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 	}
 
 	k, v := string(key.([]byte)), string(value.([]byte))
-	log.Debug("KEY: ", k, ", SIPMSG: ...")
+	//log.Debug("KEY: ", k, ", SIPMSG: ...")
 
 	if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
 		model.HandleInvite200OKMessage(k, v)
-
 	} else if sipMsg.CseqMethod == "BYE" && sipMsg.ReqStatusCode == 200 {
 		cdrPkt := model.HandleBye200OKMsg(k, sipMsg)
 
@@ -141,9 +154,16 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 			return
 		}
 
+		log.Debug(string(cdrStr))
+
+		// 推送诈骗分析模型
 		consumer.next.Log(k, string(cdrStr))
+
+		// 插入话单数据库
+		//dao.InsertCDR(cdrPkt)
+		dao.LogCDR(cdrPkt)
 	} else {
 		log.Debug("no handler for else condition")
 	}
-	log.Debug("RestoreCDR duration: ", time.Since(t))
+	//log.Debug("RestoreCDR duration: ", time.Since(t))
 }

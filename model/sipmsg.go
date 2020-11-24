@@ -40,20 +40,20 @@ type SipAnalyticPacket struct {
 
 func HandleInvite200OKMessage(key, value string) {
 	//	invite200OK插入redis
-	redis.RedisConn.PutWithExpire(key, value, redis.RedisConn.Conf.CacheExpire)
-	log.Debugf("Insert redis ok. KEY: %s, VALUE: ...", key)
+	redis.PutWithExpire(key, value, redis.Conf.CacheExpire)
+	//log.Debugf("Insert redis ok. KEY: %s, VALUE: ...", key)
 }
 
 func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipRestoredCdr {
 	var err error
 
 	//根据BYE 200OK包的call_id从redis获取对应的INVITE 200OK的包
-	invite200OKRawMsg, err := redis.RedisConn.Get(key)
+	invite200OKRawMsg, err := redis.Get(key)
 	if err == nil && invite200OKRawMsg == "" {
 		// 未获取到数据
 		return nil
 	} else if err != nil {
-		log.Error("redis.RedisConn.Get failed")
+		log.Error("redis.Get failed")
 		return nil
 	}
 
@@ -64,22 +64,24 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 	}
 
 	//查询成功后删除redis中INVITE 200OK包
-	redis.RedisConn.Delete(key)
+	redis.Delete(key)
 
 	//获取被叫归属地
 	calleeAttribution := dao.GetPositionByPhoneNum(invite200OKMsg.ToUser)
-	connectTime, err := time.Parse("20060102150405", invite200OKMsg.EventTime)
+	connectTime, err := time.ParseInLocation("20060102150405", invite200OKMsg.EventTime, time.Local)
 	//connectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
 	if err != nil {
 		log.Errorf("time.Parse error: %s", invite200OKMsg.EventTime)
 		return nil
 	}
-	disconnectTime, err := time.Parse("20060102150405", invite200OKMsg.EventTime)
+	disconnectTime, err := time.ParseInLocation("20060102150405", bye200OKMsg.EventTime, time.Local)
 	//disconnectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
 	if err != nil {
 		log.Errorf("time.Parse error: %s", invite200OKMsg.EventTime)
 		return nil
 	}
+
+	log.Debug(connectTime, disconnectTime)
 
 	//填充话单字段信息
 	cdr := dao.VoipRestoredCdr{
@@ -93,8 +95,8 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 		CalleeDevice:   invite200OKMsg.UserAgent,
 		CalleeProvince: calleeAttribution.Province,
 		CalleeCity:     calleeAttribution.City,
-		ConnectTime:    connectTime,
-		DisconnectTime: disconnectTime,
+		ConnectTime:    connectTime.Format("2006-01-02 15:04:05"),
+		DisconnectTime: disconnectTime.Format("2006-01-02 15:04:05"),
 	}
 
 	//INVITE的200OK的目的ip为主叫ip，若与BYE的200OK源ip一致，则是被叫挂机，主叫发200 OK,此时user_agent为主叫设备信息
@@ -105,10 +107,8 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 		cdr.CallerDevice = ""
 	}
 
-	cdr.Duration = int(cdr.ConnectTime.Sub(cdr.DisconnectTime).Seconds())
+	cdr.Duration = int(disconnectTime.Sub(connectTime).Seconds())
 	cdr.FraudType = ""
-
-	dao.InsertCDR(&cdr)
 
 	return &cdr
 }
