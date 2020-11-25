@@ -56,9 +56,9 @@ install:
 	install -d $(OUTPUT_PATH)/bin
 	install -d $(OUTPUT_PATH)/conf
 	install -m 0755 $(SCRIPTS_PATH)/vsctl.sh $(OUTPUT_PATH)/
-	install -m 0755 $(SCRIPTS_PATH)/cdr-restore-service.sh $(OUTPUT_PATH)/
-	install -m 0755 $(SCRIPTS_PATH)/voip-analyse-service.sh $(OUTPUT_PATH)/
-	install -m 0755 $(SCRIPTS_PATH)/rawdata-import-service.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/cdr-restore.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/voip-analyse.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/rawdata-import.sh $(OUTPUT_PATH)/
 	#install $(SCRIPTS_PATH)/mysql.sql $(OUTPUT_PATH)/
 	install $(SCRIPTS_PATH)/config.toml $(OUTPUT_PATH)/conf/
 	install $(SCRIPTS_PATH)/20201015.pcapng $(OUTPUT_PATH)/tmp/

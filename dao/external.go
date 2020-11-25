@@ -5,9 +5,12 @@ import (
 	"centnet-cdrrs/library/log"
 	"centnet-cdrrs/prot/sip"
 	"centnet-cdrrs/prot/udp"
+	"errors"
 	"fmt"
 	"github.com/astaxie/beego/orm"
 )
+
+var errNotFound = errors.New("phone position not found")
 
 type UnpackedMessage struct {
 	EventId   string
@@ -21,33 +24,68 @@ type Attribution struct {
 	city     string
 }
 
-func QueryPhonePosition() {
+func CachePhoneNumberAttribution() error {
 	o := orm.NewOrm()
 	pp := new(PhonePosition)
 	var pps []PhonePosition
 
-	n, err := o.QueryTable(pp).All(&pps)
+	n, err := o.QueryTable(pp).Filter("phone__isnull", false).GroupBy("phone").All(&pps)
 	if err != nil {
-		log.Error(err)
-		return
+		return err
 	}
-	log.Debugf("query phone_position %d rows", n)
+	log.Debugf("query phone_position 'phone' %d rows", n)
 
 	for _, val := range pps {
-		phonePositionMap[val.Phone] = val
+		mobilePhoneNumberAttributionMap[val.Phone] = val
 	}
+
+	n, err = o.QueryTable(pp).Filter("code1__isnull", false).GroupBy("code1").All(&pps)
+	if err != nil {
+		return err
+	}
+	log.Debugf("query phone_position 'code1' %d rows", n)
+
+	for _, val := range pps {
+		fixedPhoneNumberAttributionMap[val.Code1] = val
+	}
+
+	return nil
 }
 
-func GetPositionByPhoneNum(phone string) PhonePosition {
-	if len(phone) != 12 {
-		log.Error("invalid phone number:", phone)
-		return PhonePosition{}
+// 固话号码获取归属地
+// n: 3、4：通过前3位或前4位获取归属地，为-1时，前3位或4位都尝试获取
+func GetPositionByFixedPhoneNumber(num string, n int) (PhonePosition, error) {
+	if len(num) != 11 && len(num) != 12 {
+		//log.Error("invalid num number:", num)
+		return PhonePosition{}, errNotFound
 	}
 
-	if pp, ok := phonePositionMap[phone[1:8]]; ok {
-		return pp.(PhonePosition)
+	if n == 3 || n == -1 {
+		if pp, ok := fixedPhoneNumberAttributionMap[num[0:3]]; ok {
+			return pp.(PhonePosition), nil
+		}
 	}
-	return PhonePosition{}
+
+	if n == 4 || n == -1 {
+		if pp, ok := fixedPhoneNumberAttributionMap[num[0:4]]; ok {
+			return pp.(PhonePosition), nil
+		}
+	}
+
+	return PhonePosition{}, errNotFound
+}
+
+// 手机号码获取归属地
+func GetPositionByMobilePhoneNumber(num string) (PhonePosition, error) {
+	if len(num) != 11 {
+		//log.Error("invalid num number:", num)
+		return PhonePosition{}, errNotFound
+	}
+
+	if pp, ok := mobilePhoneNumberAttributionMap[num[0:7]]; ok {
+		return pp.(PhonePosition), nil
+	}
+	return PhonePosition{}, errNotFound
 }
 
 func InsertCDR(cdr *VoipRestoredCdr) {

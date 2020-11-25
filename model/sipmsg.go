@@ -5,8 +5,12 @@ import (
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
 	"encoding/json"
+	"errors"
+	"strings"
 	"time"
 )
+
+var errUnresolvableNumber = errors.New("unresolvable number")
 
 type SipAnalyticPacket struct {
 	Id            uint64 `json:"id"`
@@ -38,10 +42,88 @@ type SipAnalyticPacket struct {
 	UserAgent     string `json:"userAgent"`
 }
 
+type CalleeInfo struct {
+	Number string
+	Pos    dao.PhonePosition
+}
+
+func validatePhoneNumber(num string) bool {
+	for _, v := range num {
+		if v < '0' || v > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func ParseCalleeInfo(num string) (CalleeInfo, error) {
+	length := len(num)
+	if !validatePhoneNumber(num) || length < 11 {
+		return CalleeInfo{Number: num, Pos: dao.PhonePosition{}}, errUnresolvableNumber
+	}
+
+	var (
+		callee = num
+		err    error
+		pos    dao.PhonePosition
+	)
+
+	if length >= 11 {
+		callee = callee[length-11:]
+		if strings.HasPrefix(callee, "1") {
+			// 手机号码归属查询
+			if pos, err = dao.GetPositionByMobilePhoneNumber(callee); err == nil {
+				return CalleeInfo{Number: callee, Pos: pos}, nil
+			}
+		} else if strings.HasPrefix(callee, "0") {
+			// 座机号码归属查询
+			if pos, err = dao.GetPositionByFixedPhoneNumber(callee, -1); err == nil {
+				return CalleeInfo{Number: callee, Pos: pos}, nil
+			}
+		}
+	}
+
+	if length >= 12 {
+		callee = callee[length-12:]
+		if strings.HasPrefix(callee, "0") {
+			// 座机号码归属查询
+			if pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
+				return CalleeInfo{Number: callee, Pos: pos}, nil
+			}
+		} else if strings.HasPrefix(callee, "86") {
+			// 86xx xxxx xxxx -> 80xx xxxx xxxx -> 0xx xxxx xxxx
+			callee = strings.Replace(callee, "86", "80", 1)[1:]
+			if pos, err = dao.GetPositionByFixedPhoneNumber(callee, -1); err == nil {
+				return CalleeInfo{Number: callee, Pos: pos}, nil
+			}
+		}
+	}
+
+	if length >= 13 {
+		callee = callee[length-13:]
+		if strings.HasPrefix(callee, "86") {
+			// 86xxx xxxx xxxx -> 80xxx xxxx xxxx -> 0xxx xxxx xxxx
+			callee = strings.Replace(callee, "86", "80", 1)[1:]
+			if pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
+				return CalleeInfo{Number: callee, Pos: pos}, nil
+			}
+		}
+	}
+
+	callee = num[length-11:]
+	if strings.HasPrefix(callee, "852") {
+		return CalleeInfo{Number: callee, Pos: dao.PhonePosition{Province: "香港", City: "香港"}}, nil
+	} else if strings.HasPrefix(callee, "853") {
+		return CalleeInfo{Number: callee, Pos: dao.PhonePosition{Province: "澳门", City: "澳门"}}, nil
+	}
+
+	return CalleeInfo{Number: num, Pos: pos}, errUnresolvableNumber
+}
+
 func HandleInvite200OKMessage(key, value string) {
+
 	//	invite200OK插入redis
-	redis.PutWithExpire(key, value, redis.Conf.CacheExpire)
-	//log.Debugf("Insert redis ok. KEY: %s, VALUE: ...", key)
+	_ = redis.PutWithExpire(key, value, redis.Conf.CacheExpire)
 }
 
 func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipRestoredCdr {
@@ -66,8 +148,6 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 	//查询成功后删除redis中INVITE 200OK包
 	redis.Delete(key)
 
-	//获取被叫归属地
-	calleeAttribution := dao.GetPositionByPhoneNum(invite200OKMsg.ToUser)
 	connectTime, err := time.ParseInLocation("20060102150405", invite200OKMsg.EventTime, time.Local)
 	//connectTime, err := time.Parse(invite200OKMsg.EventTime, "2006-01-02 15:04:05")
 	if err != nil {
@@ -81,7 +161,7 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 		return nil
 	}
 
-	log.Debug(connectTime, disconnectTime)
+	//log.Debug(connectTime, disconnectTime)
 
 	//填充话单字段信息
 	cdr := dao.VoipRestoredCdr{
@@ -93,8 +173,8 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 		CallerNum:      invite200OKMsg.FromUser,
 		CalleeNum:      invite200OKMsg.ToUser,
 		CalleeDevice:   invite200OKMsg.UserAgent,
-		CalleeProvince: calleeAttribution.Province,
-		CalleeCity:     calleeAttribution.City,
+		CalleeProvince: "",
+		CalleeCity:     "",
 		ConnectTime:    connectTime.Format("2006-01-02 15:04:05"),
 		DisconnectTime: disconnectTime.Format("2006-01-02 15:04:05"),
 	}

@@ -133,6 +133,7 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 		log.Debug(time.Now())
 	}
 
+	// 反序列化sip报文字段数据
 	var sipMsg model.SipAnalyticPacket
 	err := json.Unmarshal(value.([]byte), &sipMsg)
 	if err != nil {
@@ -140,13 +141,27 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 		return
 	}
 
-	k, v := string(key.([]byte)), string(value.([]byte))
-	//log.Debug("KEY: ", k, ", SIPMSG: ...")
+	// 被叫号码字段未解析出手机号码或坐席号码归属地，直接丢弃(同一会话中所有包的FROM字段或TO字段都一样)
+	calleeInfo, err := model.ParseCalleeInfo(sipMsg.ToUser)
+	if err != nil {
+		//log.Debug("DIRTY-DATA:", string(value.([]byte)))
+		return
+	}
 
+	// call-id与sip报文原始数据
+	k, v := string(key.([]byte)), string(value.([]byte))
 	if sipMsg.CseqMethod == "INVITE" && sipMsg.ReqStatusCode == 200 {
 		model.HandleInvite200OKMessage(k, v)
 	} else if sipMsg.CseqMethod == "BYE" && sipMsg.ReqStatusCode == 200 {
 		cdrPkt := model.HandleBye200OKMsg(k, sipMsg)
+		if cdrPkt == nil {
+			return
+		}
+
+		// 填充原始被叫号码及归属地
+		cdrPkt.CalleeNum = calleeInfo.Number
+		cdrPkt.CalleeProvince = calleeInfo.Pos.Province
+		cdrPkt.CalleeCity = calleeInfo.Pos.City
 
 		cdrStr, err := json.Marshal(&cdrPkt)
 		if err != nil {
@@ -154,16 +169,12 @@ func RestoreCDR(consumer *Consumer, key, value interface{}) {
 			return
 		}
 
-		log.Debug(string(cdrStr))
-
-		// 推送诈骗分析模型
+		// 推送至诈骗分析模型
 		consumer.next.Log(k, string(cdrStr))
 
 		// 插入话单数据库
-		//dao.InsertCDR(cdrPkt)
 		dao.LogCDR(cdrPkt)
 	} else {
 		log.Debug("no handler for else condition")
 	}
-	//log.Debug("RestoreCDR duration: ", time.Since(t))
 }

@@ -2,12 +2,12 @@
 
 ulimit -n 65535
 
-if [ $# != 1 ]; then
-  echo "usage: ./cdr-restore-service.sh {start|stop|version}"
-  exit 1
-fi
+#if [ $# != 1 ]; then
+#  echo "usage: ./rawdata-import-service.sh {start|stop|version}"
+#  exit 1
+#fi
 
-SERVICE=./bin/cdr-restore-service
+SERVICE=./bin/rawdata-import-service
 CONFIG_FILE="./conf/config.toml"
 
 # Mac OS X 操作系统
@@ -41,6 +41,8 @@ stop)
 v | ver | version)
   ${SERVICE} -v
   ;;
-*) ;;
+*)
+  ${SERVICE} -c $CONFIG_FILE
+  ;;
 
 esac

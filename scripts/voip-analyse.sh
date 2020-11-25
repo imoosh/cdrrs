@@ -2,10 +2,10 @@
 
 ulimit -n 65535
 
-if [ $# != 1 ]; then
-  echo "usage: ./voip-analyse-service.sh {start|stop|version}"
-  exit 1
-fi
+#if [ $# != 1 ]; then
+#  echo "usage: ./voip-analyse-service.sh {start|stop|version}"
+#  exit 1
+#fi
 
 SERVICE=./bin/voip-analyse-service
 CONFIG_FILE="./conf/config.toml"
@@ -41,6 +41,8 @@ stop)
 v | ver | version)
   ${SERVICE} -v
   ;;
-*) ;;
+*)
+  ${SERVICE} -c $CONFIG_FILE
+  ;;
 
 esac

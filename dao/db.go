@@ -9,8 +9,11 @@ import (
 	"time"
 )
 
-var phonePositionMap = make(map[string]interface{})
 var asyncDao AsyncDao
+
+var fixedPhoneNumberAttributionMap = make(map[string]interface{})
+
+var mobilePhoneNumberAttributionMap = make(map[string]interface{})
 
 type Config struct {
 	DSN              string
@@ -40,12 +43,10 @@ func (ad *AsyncDao) Run() {
 					MultiInsertCDR(cache)
 					cache = cache[:0]
 				}
-				log.Debug(time.Now())
 			case <-timer.C:
 				MultiInsertCDR(cache)
 				cache = cache[:0]
 				timer.Reset(duration)
-				log.Debug(time.Now())
 			}
 		}
 	}()
@@ -127,7 +128,10 @@ func Init(c *Config) error {
 	orm.RegisterModel(new(PhonePosition))
 
 	// 将号码归属地表预读到内存中，加速查询速度
-	QueryPhonePosition()
+	if err := CachePhoneNumberAttribution(); err != nil {
+		log.Error(err)
+		return errors.New("CachePhoneNumberAttribution failed")
+	}
 
 	asyncDao = AsyncDao{
 		msgQ:      make(chan *VoipRestoredCdr, c.MaxCacheCapacity),
