@@ -58,6 +58,7 @@ func (ad *AsyncDao) LogCDR(cdr *VoipRestoredCdr) {
 
 type VoipRestoredCdr struct {
 	Id             int64  `json:"id"`
+	Uuid           string `json:"uuid"`
 	CallId         string `json:"callId"`
 	CallerIp       string `json:"callerIp"`
 	CallerPort     int    `json:"callerPort"`
@@ -69,51 +70,26 @@ type VoipRestoredCdr struct {
 	CalleeDevice   string `json:"calleeDevice"`
 	CalleeProvince string `json:"calleeProvince"`
 	CalleeCity     string `json:"calleeCity"`
-	//ConnectTime    time.Time `json:"connectTime"`
-	//DisconnectTime time.Time `json:"disconnectTime"`
-	ConnectTime    string `json:"connectTime"`
-	DisconnectTime string `json:"disconnectTime"`
+	ConnectTime    int64  `json:"connectTime"`
+	DisconnectTime int64  `json:"disconnectTime"`
 	Duration       int    `json:"duration"`
 	FraudType      string `json:"fraudType"`
+	CreateTime     string `json:"createTime"`
 }
 
-//type DateTime time.Time
-//
-//func (t DateTime) MarshalJSON() ([]byte, error) {
-//    var stamp = fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02 15:04:05"))
-//    return []byte(stamp), nil
-//}
-//
-//func (cdr VoipRestoredCdr) MarshalJSON() ([]byte, error) {
-//    type TmpJSON VoipRestoredCdr
-//    return json.Marshal(&struct {
-//        TmpJSON
-//        ConnectTime    DateTime `json:"connectTime"`
-//        DisconnectTime DateTime `json:"disconnectTime"`
-//    }{
-//        TmpJSON:        (TmpJSON)(cdr),
-//        ConnectTime:    DateTime(cdr.ConnectTime),
-//        DisconnectTime: DateTime(cdr.DisconnectTime),
-//    })
-//}
-
-//func (t DateTime) MarshalJSON() ([]byte, error) {
-//	return ([]byte)(strconv.FormatInt(time.Time(t).Unix(), 10)), nil
-//}
-//
-
+// json序列化只需要省市字段
 type PhonePosition struct {
-	Id         int
-	Prefix     string
-	Phone      string
-	Province   string
-	ProvinceId int64
-	City       string
-	CityId     int64
-	Isp        string
-	Code1      string
-	Zip        string
-	Types      string
+	Id         int    `json:"-"`
+	Prefix     string `json:"-"`
+	Phone      string `json:"-"`
+	Province   string `json:"province"`
+	ProvinceId int64  `json:"-"`
+	City       string `json:"city"`
+	CityId     int64  `json:"-"`
+	Isp        string `json:"-"`
+	Code1      string `json:"-"`
+	Zip        string `json:"-"`
+	Types      string `json:"-"`
 }
 
 func Init(c *Config) error {
@@ -143,3 +119,28 @@ func Init(c *Config) error {
 
 	return nil
 }
+
+//type DateTime time.Time
+//
+//func (t DateTime) MarshalJSON() ([]byte, error) {
+//    var stamp = fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02 15:04:05"))
+//    return []byte(stamp), nil
+//}
+//
+//func (cdr VoipRestoredCdr) MarshalJSON() ([]byte, error) {
+//    type TmpJSON VoipRestoredCdr
+//    return json.Marshal(&struct {
+//        TmpJSON
+//        ConnectTime    DateTime `json:"connectTime"`
+//        DisconnectTime DateTime `json:"disconnectTime"`
+//    }{
+//        TmpJSON:        (TmpJSON)(cdr),
+//        ConnectTime:    DateTime(cdr.ConnectTime),
+//        DisconnectTime: DateTime(cdr.DisconnectTime),
+//    })
+//}
+
+//func (t DateTime) MarshalJSON() ([]byte, error) {
+//	return ([]byte)(strconv.FormatInt(time.Time(t).Unix(), 10)), nil
+//}
+//

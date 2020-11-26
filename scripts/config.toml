@@ -57,7 +57,7 @@
     Filter = "udp"
 
 [mysql]
-    dsn = "root:123456@tcp(192.168.1.205:3306)/centnet_voip?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
+    dsn = "root:123456@tcp(192.168.1.205:3306)/centnet_cdrrs?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
     flushPeriod = 10
     maxFlushCapacity = 5000
     maxCacheCapacity = 10000

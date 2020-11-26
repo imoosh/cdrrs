@@ -26,15 +26,15 @@ endif
 dev: darwin
 
 darwin :
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/voip-analyse-service main/voip-analyse-service.go
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/rawdata-import-service main/rawdata-import-service.go
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/cdr-restore-service main/cdr-restore-service.go
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/voip-analyse main/voip-analyse.go
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/rawdata-import main/rawdata-import.go
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/cdr-restore main/cdr-restore.go
 
 # Cross compilation
 linux :
-	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/voip-analyse-service main/voip-analyse-service.go
-	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/rawdata-import-service main/rawdata-import-service.go
-	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/cdr-restore-service main/cdr-restore-service.go
+	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/voip-analyse main/voip-analyse.go
+	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/rawdata-import main/rawdata-import.go
+	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/cdr-restore main/cdr-restore.go
 
 test:
 	go test -v ./...

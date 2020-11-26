@@ -6,6 +6,8 @@ import (
 	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
+	"centnet-cdrrs/model"
+
 	//"encoding/json"
 	"flag"
 	"fmt"
@@ -81,7 +83,7 @@ func main() {
 	fraudAnalysisProducer.Run()
 
 	/* sip包数据消费者 */
-	restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.RestoreCDRConsumer, kafka.RestoreCDR)
+	restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.RestoreCDRConsumer, model.RestoreCDR)
 	if restoreCDRConsumer == nil {
 		log.Error("NewConsumer Error.")
 		os.Exit(-1)

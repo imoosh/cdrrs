@@ -28,10 +28,13 @@ type ConsumerConfig struct {
 }
 
 type Consumer struct {
-	sc   *sarama.Config
-	cc   *ConsumerConfig
-	fun  ConsumerHandler
-	next *Producer
+	sc     *sarama.Config
+	cc     *ConsumerConfig
+	fun    ConsumerHandler
+	Next   *Producer
+	Count  int64
+	Time   time.Time
+	ticker time.Ticker
 }
 
 func NewConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
@@ -57,15 +60,28 @@ func newConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
 	sc := sarama.NewConfig()
 	sc.Version = ver
 
-	return &Consumer{
-		sc:  sc,
-		cc:  cc,
-		fun: fun,
+	con := &Consumer{
+		sc:    sc,
+		cc:    cc,
+		fun:   fun,
+		Next:  nil,
+		Count: 0,
+		Time:  time.Now(),
 	}
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 10)
+		for {
+			select {
+			case t := <-ticker.C:
+				//log.Debug("voip packets analysis rate: %.fpps", /t.Sub(consumer.Time).Seconds())
+			}
+		}
+	}()
 }
 
 func (ac *Consumer) SetNextProducer(producer *Producer) {
-	ac.next = producer
+	ac.Next = producer
 }
 
 func (ac *Consumer) Run() error {

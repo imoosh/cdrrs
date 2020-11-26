@@ -1,14 +1,15 @@
 package dao
 
 import (
+	uuid "github.com/satori/go.uuid"
 	"testing"
-	"time"
 )
 
 func TestMultiInsertCDR(t *testing.T) {
 	cdr := VoipRestoredCdr{
 		Id:             0,
 		CallId:         "1234",
+		Uuid:           uuid.NewV4().String(),
 		CallerIp:       "aaa",
 		CallerPort:     0,
 		CalleeIp:       "aaa",
@@ -19,10 +20,11 @@ func TestMultiInsertCDR(t *testing.T) {
 		CalleeDevice:   "dfasd",
 		CalleeProvince: "asdf",
 		CalleeCity:     "asdf",
-		ConnectTime:    time.Time{},
-		DisconnectTime: time.Time{},
+		ConnectTime:    0,
+		DisconnectTime: 0,
 		Duration:       0,
 		FraudType:      "",
+		CreateTime:     "",
 	}
 
 	cdrs := []*VoipRestoredCdr{

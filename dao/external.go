@@ -19,34 +19,30 @@ type UnpackedMessage struct {
 	SIP       *sip.SipMsg
 }
 
-type Attribution struct {
-	province string
-	city     string
-}
-
 func CachePhoneNumberAttribution() error {
 	o := orm.NewOrm()
 	pp := new(PhonePosition)
 	var pps []PhonePosition
 
-	n, err := o.QueryTable(pp).Filter("phone__isnull", false).GroupBy("phone").All(&pps)
+	// 查询并缓存手机号码归属地列表
+	n, err := o.QueryTable(pp).Filter("phone__isnull", false).GroupBy("phone").All(&pps, "Phone", "Province", "City")
 	if err != nil {
 		return err
 	}
-	log.Debugf("query phone_position 'phone' %d rows", n)
-
+	log.Debugf("Query [%d] results through the 'phone' field in phone_position table", n)
 	for _, val := range pps {
 		mobilePhoneNumberAttributionMap[val.Phone] = val
 	}
 
-	n, err = o.QueryTable(pp).Filter("code1__isnull", false).GroupBy("code1").All(&pps)
+	// 查询并缓存座机号码归属地列表
+	n, err = o.QueryTable(pp).Filter("code1__isnull", false).GroupBy("code1").All(&pps, "Code1", "Province", "City")
 	if err != nil {
 		return err
 	}
-	log.Debugf("query phone_position 'code1' %d rows", n)
-
+	log.Debugf("Query [%d] results through the 'code1' field in phone_position table", n)
 	for _, val := range pps {
 		fixedPhoneNumberAttributionMap[val.Code1] = val
+		log.Debug(val)
 	}
 
 	return nil
@@ -89,8 +85,11 @@ func GetPositionByMobilePhoneNumber(num string) (PhonePosition, error) {
 }
 
 func InsertCDR(cdr *VoipRestoredCdr) {
-	sql := fmt.Sprintf("insert into voip_restored_cdr (call_id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration)values(\"%s\",\"%s\",%d,\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d)",
-		cdr.CallId, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
+	sql := fmt.Sprintf(`
+insert into voip_restored_cdr (call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,
+callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration)
+        values("%s","%s","%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s",%d,%d,%d)`,
+		cdr.CallId, cdr.Uuid, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
 		cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
 	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
@@ -105,13 +104,13 @@ func MultiInsertCDR(cdrs []*VoipRestoredCdr) {
 
 	log.Debugf("%d CDRs inserted", len(cdrs))
 
-	sql := "INSERT INTO voip_restored_cdr (call_id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration) VALUES "
+	sql := "INSERT INTO voip_restored_cdr (call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
 	buf := bytes.Buffer{}
 	buf.Write([]byte(sql))
 	for _, cdr := range cdrs {
-		buf.WriteString(fmt.Sprintf(`("%s","%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s","%s","%s",%d),`,
-			cdr.CallId, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
-			cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration))
+		buf.WriteString(fmt.Sprintf(`("%s","%s","%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s",%d,%d,%d,"%s"),`,
+			cdr.CallId, cdr.Uuid, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
+			cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration, cdr.CreateTime))
 	}
 	// 替换最后一个','
 	buf.Bytes()[buf.Len()-1] = ';'

@@ -3,11 +3,11 @@
 ulimit -n 65535
 
 #if [ $# != 1 ]; then
-#  echo "usage: ./rawdata-import-service.sh {start|stop|version}"
+#  echo "usage: ./rawdata-import.sh {start|stop|version}"
 #  exit 1
 #fi
 
-SERVICE=./bin/rawdata-import-service
+SERVICE=./bin/rawdata-import
 CONFIG_FILE="./conf/config.toml"
 
 # Mac OS X 操作系统

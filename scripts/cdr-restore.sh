@@ -3,11 +3,11 @@
 ulimit -n 65535
 
 #if [ $# != 1 ]; then
-#  echo "usage: ./cdr-restore-service.sh {start|stop|version}"
+#  echo "usage: ./cdr-restore.sh {start|stop|version}"
 #  exit 1
 #fi
 
-SERVICE=./bin/cdr-restore-service
+SERVICE=./bin/cdr-restore
 CONFIG_FILE="./conf/config.toml"
 
 # Mac OS X 操作系统

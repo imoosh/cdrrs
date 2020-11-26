@@ -3,7 +3,9 @@ package main
 import (
 	"centnet-cdrrs/adapter/kafka"
 	"centnet-cdrrs/conf"
+	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
+	"centnet-cdrrs/model"
 	"flag"
 	"fmt"
 	"os"
@@ -53,6 +55,13 @@ func main() {
 	/* 日志模块初始化 */
 	log.Init(conf.Conf.Logging)
 
+	/* 数据库模块初始化 */
+	err := dao.Init(conf.Conf.Mysql)
+	if err != nil {
+		log.Error(err)
+		os.Exit(-1)
+	}
+
 	/* 待还原话单数据生产者 */
 	restoreCDRProducer, err := kafka.NewProducer(conf.Conf.Kafka.RestoreCDRProducer)
 	if err != nil {
@@ -61,16 +70,8 @@ func main() {
 	}
 	restoreCDRProducer.Run()
 
-	/* sip包数据生产者 */
-	sipPacketProducer, err := kafka.NewProducer(conf.Conf.Kafka.SipPacketProducer)
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
-	}
-	sipPacketProducer.Run()
-
 	/* sip包数据消费者 */
-	sipPacketConsumer := kafka.NewConsumer(conf.Conf.Kafka.SipPacketConsumer, kafka.AnalyzePacket)
+	sipPacketConsumer := kafka.NewConsumer(conf.Conf.Kafka.SipPacketConsumer, model.AnalyzePacket)
 	if sipPacketConsumer == nil {
 		log.Error("NewConsumer Error.")
 		os.Exit(-1)

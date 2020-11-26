@@ -3,11 +3,11 @@
 ulimit -n 65535
 
 #if [ $# != 1 ]; then
-#  echo "usage: ./voip-analyse-service.sh {start|stop|version}"
+#  echo "usage: ./voip-analyse.sh {start|stop|version}"
 #  exit 1
 #fi
 
-SERVICE=./bin/voip-analyse-service
+SERVICE=./bin/voip-analyse
 CONFIG_FILE="./conf/config.toml"
 
 # Mac OS X 操作系统
