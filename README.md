@@ -31,9 +31,9 @@
 ```
 
 ### 带实现部分
-* 数据库分表
-* kafka优化
-* sip消息字段优化
+* 数据库分表 beego/rom不支持，考虑使用kingshard
+* kafka优化，已完成
+* sip消息字段优化，已完成
 
 ### kafka使用
 [Kafka入门教程 Golang实现Kafka消息发送、接收](https://blog.csdn.net/tflasd1157/article/details/81985722)
