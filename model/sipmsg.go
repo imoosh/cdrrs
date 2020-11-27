@@ -211,16 +211,7 @@ func atoi(s string, n int) (int, error) {
 }
 
 // 解析sip报文
-func AnalyzePacket(consumer *kafka.Consumer, key, value interface{}) {
-	const FlowRateDuration = 100000
-
-	// 计算流速，每10w计算一次
-	consumer.Count++
-	if consumer.Count%FlowRateDuration == 0 {
-		t := time.Now()
-		log.Debug("voip packets analysis rate: %.fpps", FlowRateDuration/t.Sub(consumer.Time).Seconds())
-		consumer.Time = t
-	}
+func AnalyzePacket(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
 
 	rtd := file.Parse(string(value.([]byte)))
 	if rtd == nil {
@@ -301,12 +292,11 @@ func AnalyzePacket(consumer *kafka.Consumer, key, value interface{}) {
 	}
 
 	consumer.Next.Log(string(sipMsg.CallId.Value), string(jsonStr))
-	log.Debug(string(jsonStr))
 }
 
 var count1 int
 
-func RestoreCDR(consumer *kafka.Consumer, key, value interface{}) {
+func RestoreCDR(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
 
 	count1++
 	if count1%100000 == 0 {

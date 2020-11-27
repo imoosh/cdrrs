@@ -42,7 +42,6 @@ func CachePhoneNumberAttribution() error {
 	log.Debugf("Query [%d] results through the 'code1' field in phone_position table", n)
 	for _, val := range pps {
 		fixedPhoneNumberAttributionMap[val.Code1] = val
-		log.Debug(val)
 	}
 
 	return nil

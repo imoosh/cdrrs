@@ -82,18 +82,24 @@ func main() {
 	}
 	fraudAnalysisProducer.Run()
 
-	/* sip包数据消费者 */
-	restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.RestoreCDRConsumer, model.RestoreCDR)
-	if restoreCDRConsumer == nil {
-		log.Error("NewConsumer Error.")
-		os.Exit(-1)
-	}
-	/* 解析完的sip包数据交给下一级的生产者处理 */
-	restoreCDRConsumer.SetNextProducer(fraudAnalysisProducer)
-	err = restoreCDRConsumer.Run()
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
+	///* sip包数据消费者 */
+	//restoreCDRConsumer := kafka.NewConsumer(conf.Conf.Kafka.RestoreCDRConsumer, model.RestoreCDR)
+	//if restoreCDRConsumer == nil {
+	//	log.Error("NewConsumer Error.")
+	//	os.Exit(-1)
+	//}
+	///* 解析完的sip包数据交给下一级的生产者处理 */
+	//restoreCDRConsumer.SetNextProducer(fraudAnalysisProducer)
+	//err = restoreCDRConsumer.Run()
+	//if err != nil {
+	//	log.Error(err)
+	//	os.Exit(-1)
+	//}
+	c := conf.Conf.Kafka.RestoreCDRConsumer
+	for i := 1; i <= c.GroupMembers; i++ {
+		clientID := fmt.Sprintf("VoipAnalysisClient_%02d", i)
+		sipPacketConsumer := kafka.NewConsumerGroupMember(c, clientID, model.RestoreCDR)
+		sipPacketConsumer.SetNextPipeline(fraudAnalysisProducer)
 	}
 
 	//mock(fraudAnalysisProducer)

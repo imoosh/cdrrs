@@ -71,17 +71,14 @@ func main() {
 	restoreCDRProducer.Run()
 
 	/* sip包数据消费者 */
-	sipPacketConsumer := kafka.NewConsumer(conf.Conf.Kafka.SipPacketConsumer, model.AnalyzePacket)
-	if sipPacketConsumer == nil {
-		log.Error("NewConsumer Error.")
-		os.Exit(-1)
-	}
-	/* 解析完的sip包数据交给下一级的生产者处理 */
-	sipPacketConsumer.SetNextProducer(restoreCDRProducer)
-	err = sipPacketConsumer.Run()
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
+	c := conf.Conf.Kafka.SipPacketConsumer
+	for i := 1; i <= c.GroupMembers; i++ {
+		clientID := fmt.Sprintf("VoipAnalysisClient_%02d", i)
+		sipPacketConsumer := kafka.NewConsumerGroupMember(c, clientID, model.AnalyzePacket)
+		if sipPacketConsumer == nil {
+			os.Exit(-1)
+		}
+		sipPacketConsumer.SetNextPipeline(restoreCDRProducer)
 	}
 
 	// os signal
