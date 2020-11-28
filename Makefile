@@ -26,15 +26,15 @@ endif
 dev: darwin
 
 darwin :
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/packet-analytic-service main/packet-analytic-service.go
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/packet-input-service main/packet-input-service.go
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/cdr-output-service main/cdr-output-service.go
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/voip-analyse main/voip-analyse.go
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/rawdata-import main/rawdata-import.go
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/cdr-restore main/cdr-restore.go
 
 # Cross compilation
 linux :
-	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/packet-analytic-service main/packet-analytic-service.go
-	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/packet-input-service main/packet-input-service.go
-	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/cdr-output-service main/cdr-output-service.go
+	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/voip-analyse main/voip-analyse.go
+	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/rawdata-import main/rawdata-import.go
+	CGO_ENABLED=1 GOOS=linux  GOARCH=amd64  go build $(GOBUILD_FLAGS) -o $(BUILD_PATH)/bin/cdr-restore main/cdr-restore.go
 
 test:
 	go test -v ./...
@@ -52,16 +52,15 @@ fmt:
 # deps:
 
 install:
-	install -d $(OUTPUT_PATH)/tmp
 	install -d $(OUTPUT_PATH)/bin
 	install -d $(OUTPUT_PATH)/conf
-	install -m 0755 $(SCRIPTS_PATH)/vsctl.sh $(OUTPUT_PATH)/
-	install -m 0755 $(SCRIPTS_PATH)/cdr-output-service.sh $(OUTPUT_PATH)/
-	install -m 0755 $(SCRIPTS_PATH)/packet-analytic-service.sh $(OUTPUT_PATH)/
-	install -m 0755 $(SCRIPTS_PATH)/packet-input-service.sh $(OUTPUT_PATH)/
-	#install $(SCRIPTS_PATH)/mysql.sql $(OUTPUT_PATH)/
+	install -d $(OUTPUT_PATH)/scripts
+	install -m 0755 $(SCRIPTS_PATH)/cdr-restore.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/voip-analyse.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/rawdata-import.sh $(OUTPUT_PATH)/
+	install $(SCRIPTS_PATH)/*.sql $(OUTPUT_PATH)/scripts/
 	install $(SCRIPTS_PATH)/config.toml $(OUTPUT_PATH)/conf/
-	install $(SCRIPTS_PATH)/20201015.pcapng $(OUTPUT_PATH)/tmp/
-	install -m 0755 $(SCRIPTS_PATH)/tcpreplay.sh $(OUTPUT_PATH)/tmp/
+	install -m 0755 $(SCRIPTS_PATH)/tcpreplay.sh $(OUTPUT_PATH)/scripts/
+	install -m 0755 $(SCRIPTS_PATH)/import_sql.sh $(OUTPUT_PATH)/scripts/
 
 docker:

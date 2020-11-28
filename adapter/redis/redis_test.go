@@ -7,14 +7,14 @@ import (
 )
 
 func TestConn_Put(t *testing.T) {
-	RedisConn.Put("04ab01e2d142787@192.168.6.24", "{}")
+	redisConn.Put("04ab01e2d142787@192.168.6.24", "{}")
 	fmt.Println("insert redis ok")
 }
 
 func TestConn_PutWithExpire(t *testing.T) {
-	RedisConn.PutWithExpire("04ab01e2d142787@192.168.6.24", "{}", conf.Conf.Redis.CacheExpire)
+	redisConn.PutWithExpire("04ab01e2d142787@192.168.6.24", "{}", conf.Conf.Redis.CacheExpire)
 }
 
 func TestConn_Delete(t *testing.T) {
-	RedisConn.Delete("04ab01e2d142787@192.168.6.24")
+	redisConn.Delete("04ab01e2d142787@192.168.6.24")
 }

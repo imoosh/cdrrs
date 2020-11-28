@@ -8,11 +8,14 @@ import (
 	"time"
 )
 
-var RedisConn *Conn
-var redisClient *redis.Pool
+var redisConn *Conn
 
 type Config struct {
 	Host        string
+	Password    string
+	IdleTimeout int
+	MaxIdle     int
+	MaxActive   int
 	CacheExpire int
 }
 
@@ -113,40 +116,15 @@ func (rc *Conn) Test() bool {
 
 func Init(c *Config) error {
 	var err error
-	RedisConn, err = NewRedisConn(c)
+	redisConn, err = NewRedisConn(c)
 	if err != nil {
 		log.Error(err)
 		return errors.New("new redis connection error")
 	}
 
-	if !RedisConn.Test() {
+	if !redisConn.Test() {
 		return errors.New("redis test failed")
 	}
 
 	return nil
-}
-
-func initRedisPool(server string, password string) *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:     2, //空闲数
-		IdleTimeout: 240 * time.Second,
-		MaxActive:   3, //最大数
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server)
-			if err != nil {
-				return nil, err
-			}
-			if password != "" {
-				if _, err := c.Do("AUTH", password); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			return c, err
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-	}
 }
