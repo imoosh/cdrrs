@@ -171,6 +171,7 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 	//log.Debug(connectTime, disconnectTime)
 
 	//填充话单字段信息
+	now := time.Now()
 	cdr := dao.VoipRestoredCdr{
 		CallId:         invite200OKMsg.CallId,
 		Uuid:           uuid.NewV4().String(),
@@ -187,7 +188,8 @@ func HandleBye200OKMsg(key string, bye200OKMsg SipAnalyticPacket) *dao.VoipResto
 		DisconnectTime: disconnectTime.Unix(),
 		Duration:       0,
 		FraudType:      "",
-		CreateTime:     time.Now().Format("2006-01-02 15:04:05"),
+		CreateTime:     now.Format("2006-01-02 15:04:05"),
+		CreateTimeX:    now,
 	}
 
 	//INVITE的200OK的目的ip为主叫ip，若与BYE的200OK源ip一致，则是被叫挂机，主叫发200 OK,此时user_agent为主叫设备信息
@@ -212,6 +214,16 @@ func atoi(s string, n int) (int, error) {
 
 // 解析sip报文
 func AnalyzePacket(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
+
+	consumer.TotalCount++
+	select {
+	case <-consumer.Timer.C:
+		log.Debugf("%s flow rate: %d pps, total: %d", consumer.ClientID, (consumer.TotalCount-consumer.LastCount)/3, consumer.TotalCount)
+		consumer.LastCount = consumer.TotalCount
+		consumer.Timer.Reset(time.Second * 3)
+	default:
+		consumer.TotalCount++
+	}
 
 	rtd := file.Parse(string(value.([]byte)))
 	if rtd == nil {
@@ -294,14 +306,9 @@ func AnalyzePacket(consumer *kafka.ConsumerGroupMember, key, value interface{}) 
 	consumer.Next.Log(string(sipMsg.CallId.Value), string(jsonStr))
 }
 
-var count1 int
-
 func RestoreCDR(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
 
-	count1++
-	if count1%100000 == 0 {
-		log.Debug(time.Now())
-	}
+	consumer.TotalCount++
 
 	// 反序列化sip报文字段数据
 	var sipMsg SipAnalyticPacket
@@ -334,14 +341,13 @@ func RestoreCDR(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
 		cdrPkt.CalleeProvince = calleeInfo.Pos.Province
 		cdrPkt.CalleeCity = calleeInfo.Pos.City
 
-		cdrStr, err := json.Marshal(&cdrPkt)
-		if err != nil {
-			log.Errorf("json.Marshal error: ", err)
-			return
-		}
-
-		// 推送至诈骗分析模型
-		consumer.Next.Log(k, string(cdrStr))
+		//// 推送至诈骗分析模型
+		//cdrStr, err := json.Marshal(&cdrPkt)
+		//if err != nil {
+		//    log.Errorf("json.Marshal error: ", err)
+		//    return
+		//}
+		//consumer.Next.Log(k, string(cdrStr))
 
 		// 插入话单数据库
 		dao.LogCDR(cdrPkt)
