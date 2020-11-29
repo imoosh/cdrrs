@@ -216,15 +216,7 @@ func atoi(s string, n int) (int, error) {
 func AnalyzePacket(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
 
 	consumer.TotalCount++
-	select {
-	case <-consumer.Timer.C:
-		log.Debugf("%s flow rate: %d pps, total: %d", consumer.ClientID, (consumer.TotalCount-consumer.LastCount)/3, consumer.TotalCount)
-		consumer.LastCount = consumer.TotalCount
-		consumer.Timer.Reset(time.Second * 3)
-	default:
-		consumer.TotalCount++
-	}
-
+	log.Debug("#############", consumer.TotalCount)
 	rtd := file.Parse(string(value.([]byte)))
 	if rtd == nil {
 		return
