@@ -42,7 +42,6 @@ func CachePhoneNumberAttribution() error {
 	log.Debugf("Query [%d] results through the 'code1' field in phone_position table", n)
 	for _, val := range pps {
 		fixedPhoneNumberAttributionMap[val.Code1] = val
-		log.Debug(val)
 	}
 
 	return nil
@@ -97,14 +96,41 @@ callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,
 	}
 }
 
+func CreateTable(tableName string) {
+	sql := "CREATE TABLE IF NOT EXISTS `" + tableName + "`" + " (" +
+		"`id` bigint(20) NOT NULL AUTO_INCREMENT," +
+		"`uuid` varchar(64) NOT NULL COMMENT '话单唯一ID'," +
+		"`call_id` varchar(128) DEFAULT NULL COMMENT '通话ID'," +
+		"`caller_ip` varchar(64) DEFAULT NULL COMMENT '主叫IP', " +
+		"`caller_port` int(8) DEFAULT NULL COMMENT '主叫端口'," +
+		"`callee_ip` varchar(64) DEFAULT NULL COMMENT '被叫IP'," +
+		"`callee_port` int(8) DEFAULT NULL COMMENT '被叫端口'," +
+		"`caller_num` varchar(64) DEFAULT NULL COMMENT '主叫号码'," +
+		"`callee_num` varchar(64) DEFAULT NULL COMMENT '被叫号码'," +
+		"`caller_device` varchar(128) DEFAULT NULL COMMENT '主叫设备名'," +
+		"`callee_device` varchar(128) DEFAULT NULL COMMENT '被叫设备名'," +
+		"`callee_province` varchar(64) DEFAULT NULL COMMENT '被叫所属省'," +
+		"`callee_city` varchar(64) DEFAULT NULL COMMENT '被叫所属市'," +
+		"`connect_time` int(11) DEFAULT NULL COMMENT '通话开始时间'," +
+		"`disconnect_time` int(11) DEFAULT NULL COMMENT '通话结束时间'," +
+		"`duration` int(8) DEFAULT '0' COMMENT '通话时长'," +
+		"`fraud_type` varchar(32) DEFAULT NULL COMMENT '诈骗类型'," +
+		"`create_time` datetime DEFAULT NULL COMMENT '生成时间'," +
+		"PRIMARY KEY (`id`), UNIQUE KEY `cdr_id` (`id`) USING BTREE) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"
+
+	_, err := orm.NewOrm().Raw(sql).Exec()
+	if err != nil {
+		log.Error(err)
+	}
+}
+
 func MultiInsertCDR(cdrs []*VoipRestoredCdr) {
 	if len(cdrs) == 0 {
 		return
 	}
 
-	log.Debugf("%d CDRs inserted", len(cdrs))
-
-	sql := "INSERT INTO voip_restored_cdr (call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
+	//sql := "INSERT INTO voip_restored_cdr_" + cdrs[0].CreateTimeX.Format("20060102150405") + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
+	sql := "INSERT INTO voip_restored_cdr_" + cdrs[0].CreateTimeX.Format("20060102") + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
 	buf := bytes.Buffer{}
 	buf.Write([]byte(sql))
 	for _, cdr := range cdrs {
@@ -112,13 +138,15 @@ func MultiInsertCDR(cdrs []*VoipRestoredCdr) {
 			cdr.CallId, cdr.Uuid, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
 			cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration, cdr.CreateTime))
 	}
-	// 替换最后一个','
+	// 替换最后一个','为';'
 	buf.Bytes()[buf.Len()-1] = ';'
 
 	_, err := orm.NewOrm().Raw(buf.String()).Exec()
 	if err != nil {
 		log.Error(err)
 	}
+
+	log.Debugf("%d CDRs insert into table voip_restored_cdr_%s", len(cdrs), cdrs[0].CreateTimeX.Format("20060102"))
 }
 
 func LogCDR(cdr *VoipRestoredCdr) {

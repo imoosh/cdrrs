@@ -1,231 +1,129 @@
 package kafka
 
-// 参考: https://www.cnblogs.com/mrblue/p/10770651.html
-
 import (
 	"centnet-cdrrs/library/log"
 	"context"
-	"fmt"
 	"github.com/Shopify/sarama"
 	"strings"
 	"time"
 )
 
-type ConsumerHandler func(*Consumer, interface{}, interface{})
+// https://www.cnblogs.com/mrblue/p/10770651.html
+// https://www.yuque.com/sanweishe/pqy91r/osgq9q
+// github.com/!shopify/sarama@v1.27.2/functional_consumer_group_test.go
 
 // Consumer Consumer配置
 type ConsumerConfig struct {
-	Topic       string
-	splitTopic  []string
-	Broker      string
-	splitBroker []string
-	Partition   int32
-	Replication int16
-	Group       string
-	Version     string
+	Topic  string
+	Broker string
+	Group  string
 
-	NumRoutine int
+	GroupMembers        int
+	FlowRateFlushPeriod int
 }
 
-type Consumer struct {
-	sc     *sarama.Config
-	cc     *ConsumerConfig
-	fun    ConsumerHandler
-	Next   *Producer
-	Count  int64
-	Time   time.Time
-	ticker time.Ticker
+type ConsumerHandler func(*ConsumerGroupMember, interface{}, interface{})
+
+type ConsumerGroupMember struct {
+	sarama.ConsumerGroup
+	ClientID string
+	errs     []error
+
+	Next       *Producer
+	handle     ConsumerHandler
+	TotalCount uint64
+	LastCount  uint64
+	Timer      *time.Timer
+	Conf       *ConsumerConfig
 }
 
-func NewConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
-	return newConsumer(cc, fun)
-}
+func NewConsumerGroupMember(c *ConsumerConfig, clientID string, handle ConsumerHandler) *ConsumerGroupMember {
+	config := sarama.NewConfig()
+	config.Version = sarama.V2_0_0_0
+	config.ClientID = clientID
+	config.Consumer.Return.Errors = true
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Consumer.Group.Rebalance.Timeout = 10 * time.Second
 
-func newConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
-	ver, err := sarama.ParseKafkaVersion(cc.Version)
+	group, err := sarama.NewConsumerGroup(strings.Split(c.Broker, ","), c.Group, config)
 	if err != nil {
 		log.Error(err)
 		return nil
 	}
 
-	if cc.splitTopic = strings.Split(cc.Topic, ","); len(cc.splitTopic) == 0 {
-		log.Errorf("invalid arguments: WrappedConsumer.cc.Topic = %s\n", cc.Topic)
-		return nil
+	member := &ConsumerGroupMember{
+		ConsumerGroup: group,
+		ClientID:      clientID,
+		handle:        handle,
+		TotalCount:    0,
+		LastCount:     0,
+		Timer:         time.NewTimer(time.Second * time.Duration(c.FlowRateFlushPeriod)),
+		Conf:          c,
 	}
-	if cc.splitBroker = strings.Split(cc.Broker, ","); len(cc.splitBroker) == 0 {
-		log.Errorf("invalid arguments: WrappedConsumer.cc.Broker = %s\n", cc.Broker)
-		return nil
-	}
+	go member.loop(strings.Split(c.Topic, ","))
+	return member
+}
 
-	sc := sarama.NewConfig()
-	sc.Version = ver
-
-	con := &Consumer{
-		sc:    sc,
-		cc:    cc,
-		fun:   fun,
-		Next:  nil,
-		Count: 0,
-		Time:  time.Now(),
-	}
-
+func (m *ConsumerGroupMember) loop(topics []string) {
+	// 处理错误
 	go func() {
-		ticker := time.NewTicker(time.Second * 10)
+		for err := range m.Errors() {
+			_ = m.Close()
+			m.errs = append(m.errs, err)
+		}
+	}()
+
+	// 统计流量
+	go func() {
 		for {
 			select {
-			case t := <-ticker.C:
-				//log.Debug("voip packets analysis rate: %.fpps", /t.Sub(consumer.Time).Seconds())
+			case <-m.Timer.C:
+				log.Debugf("%s flow rate: %d pps, total: %d", m.ClientID, (m.TotalCount-m.LastCount)/uint64(m.Conf.FlowRateFlushPeriod), m.TotalCount)
+				m.LastCount = m.TotalCount
+				m.Timer.Reset(time.Second * time.Duration(m.Conf.FlowRateFlushPeriod))
 			}
 		}
 	}()
-}
 
-func (ac *Consumer) SetNextProducer(producer *Producer) {
-	ac.Next = producer
-}
-
-func (ac *Consumer) Run() error {
-	numRoutine := ac.cc.NumRoutine
-	//ctx, cancel := make([]context.Context, numRoutine), make([]context.CancelFunc, numRoutine)
-	ctx := make([]context.Context, numRoutine)
-
-	for i := 0; i < numRoutine; i++ {
-		ctx[i], _ = context.WithCancel(context.Background())
-	}
-
-	cgHandler := consumerGroupHandler{fun: ac.fun, customConsumer: ac}
-	group, err := sarama.NewConsumerGroup(ac.cc.splitBroker, ac.cc.Group, ac.sc)
-	if err != nil {
-		panic(err)
-	}
-	//defer func() { _ = group.Close() }()
-
-	for i := 0; i < numRoutine; i++ {
-		go func(i int) {
-			for {
-				err := group.Consume(ctx[i], ac.cc.splitTopic, &cgHandler)
-				if err != nil {
-					log.Error(err)
-					time.Sleep(time.Second * 5)
-				}
-			}
-		}(i)
-	}
-
-	return nil
-}
-
-func (ac *Consumer) DeleteTopic(topic string) {
-	ver, err := sarama.ParseKafkaVersion(ac.cc.Version)
-	if err != nil {
-		panic(err)
-	}
-
-	config := sarama.NewConfig()
-	config.Version = ver
-
-	admin, err := sarama.NewClusterAdmin(strings.Split(ac.cc.Broker, ","), config)
-	if err != nil {
-		panic(err)
-	}
-
-	if err = admin.DeleteTopic(topic); err != nil {
-		panic(err)
-	}
-	log.Debug("topic '%s' deleted", topic)
-
-	if err := admin.Close(); err != nil {
-		panic(err)
-	}
-}
-
-func (ac *Consumer) CreateTopic() {
-	ver, err := sarama.ParseKafkaVersion(ac.cc.Version)
-	if err != nil {
-		panic(err)
-	}
-
-	config := sarama.NewConfig()
-	config.Version = ver
-
-	admin, err := sarama.NewClusterAdmin(strings.Split(ac.cc.Broker, ","), config)
-	if err != nil {
-		panic(err)
-	}
-
-	detail, err := admin.ListTopics()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, v := range ac.cc.splitTopic {
-		if d, ok := detail[v]; ok {
-			if ac.cc.Partition > d.NumPartitions {
-				if err := admin.CreatePartitions(v, ac.cc.Partition, nil, false); err != nil {
-					panic(err)
-				}
-				log.Debug("topic '%s' partition '%d' / NumPartitions '%d' created",
-					v, ac.cc.Partition, d.NumPartitions)
-			}
-		} else {
-			if err := admin.CreateTopic(v, &sarama.TopicDetail{
-				NumPartitions:     ac.cc.Partition,
-				ReplicationFactor: ac.cc.Replication,
-			}, false); err != nil {
-				panic(err)
-			}
-			log.Debug("topic '%s' created", v)
+	// 循环消费
+	ctx := context.Background()
+	for {
+		if err := m.Consume(ctx, topics, m); err == sarama.ErrClosedConsumerGroup {
+			return
+		} else if err != nil {
+			m.errs = append(m.errs, err)
+			return
 		}
 	}
-
-	if detail, err := admin.ListTopics(); err != nil {
-		fmt.Println(err)
-	} else {
-		for k := range detail {
-			log.Debug("[%s] %+v", k, detail[k])
-		}
-	}
-
-	if err := admin.Close(); err != nil {
-		panic(err)
-	}
 }
 
-type consumerGroupHandler struct {
-	fun            ConsumerHandler
-	customConsumer *Consumer
-}
+func (m *ConsumerGroupMember) Stop() { _ = m.Close() }
 
-func (c *consumerGroupHandler) Setup(session sarama.ConsumerGroupSession) error {
+func (m *ConsumerGroupMember) Setup(s sarama.ConsumerGroupSession) error {
+	// enter post-setup state
 	return nil
 }
 
-func (c *consumerGroupHandler) Cleanup(session sarama.ConsumerGroupSession) error {
+func (m *ConsumerGroupMember) Cleanup(s sarama.ConsumerGroupSession) error {
+	// enter post-cleanup state
 	return nil
 }
 
-func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	count := 0
-	//picker := time.NewTicker(time.Second)
-	//
-	//go func() {
-	//	for {
-	//		select {
-	//		case t := <-picker.C:
-	//			log.Debug(t.Format("2006-01-02 15:04:05.000000"), claim.Partition(), count)
-	//		}
-	//	}
-	//}()
+func (m *ConsumerGroupMember) ConsumeClaim(s sarama.ConsumerGroupSession, c sarama.ConsumerGroupClaim) error {
 
-	for msg := range claim.Messages() {
-		count++
+	count := make(map[int]int)
+	for msg := range c.Messages() {
+		// TODO
+		m.handle(m, msg.Key, msg.Value)
+		count[int(msg.Partition)]++
+		//log.Debugf("ClientID: %s, Topic: %s, Partition: %d, Offset: %d, TotalCount: %d", m.ClientID, msg.Topic, msg.Partition, msg.Offset, count[int(msg.Partition)])
 
-		c.fun(c.customConsumer, msg.Key, msg.Value)
-
-		//key, value := string(msg.Key), string(msg.Value)
-		//fmt.Println(key, value, msg.Partition, count)
-		session.MarkMessage(msg, "")
+		s.MarkMessage(msg, "")
 	}
-
 	return nil
+}
+
+// 设置下一级流水线作业
+func (m *ConsumerGroupMember) SetNextPipeline(producer *Producer) {
+	m.Next = producer
 }

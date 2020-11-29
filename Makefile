@@ -52,16 +52,15 @@ fmt:
 # deps:
 
 install:
-	install -d $(OUTPUT_PATH)/tmp
 	install -d $(OUTPUT_PATH)/bin
 	install -d $(OUTPUT_PATH)/conf
-	install -m 0755 $(SCRIPTS_PATH)/vsctl.sh $(OUTPUT_PATH)/
+	install -d $(OUTPUT_PATH)/scripts
 	install -m 0755 $(SCRIPTS_PATH)/cdr-restore.sh $(OUTPUT_PATH)/
 	install -m 0755 $(SCRIPTS_PATH)/voip-analyse.sh $(OUTPUT_PATH)/
 	install -m 0755 $(SCRIPTS_PATH)/rawdata-import.sh $(OUTPUT_PATH)/
-	#install $(SCRIPTS_PATH)/mysql.sql $(OUTPUT_PATH)/
+	install $(SCRIPTS_PATH)/*.sql $(OUTPUT_PATH)/scripts/
 	install $(SCRIPTS_PATH)/config.toml $(OUTPUT_PATH)/conf/
-	install $(SCRIPTS_PATH)/20201015.pcapng $(OUTPUT_PATH)/tmp/
-	install -m 0755 $(SCRIPTS_PATH)/tcpreplay.sh $(OUTPUT_PATH)/tmp/
+	install -m 0755 $(SCRIPTS_PATH)/tcpreplay.sh $(OUTPUT_PATH)/scripts/
+	install -m 0755 $(SCRIPTS_PATH)/import_sql.sh $(OUTPUT_PATH)/scripts/
 
 docker:

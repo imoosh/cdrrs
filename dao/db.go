@@ -29,15 +29,32 @@ type AsyncDao struct {
 	c         *Config
 }
 
+func (ad *AsyncDao) needToCreateTable(cdr, last time.Time) bool {
+	// 分表名格式为voip_restored_cdr_YYYYMMDD，cdrCreateTime格式：2006-01-02 15:04:05，lastTableSuffix格式为：2006-01-02
+	// 判断当前cdr创建日期是否与上次操作分表时间相同，不同则新建表
+	return !(cdr.Year() == last.Year() && cdr.Month() == last.Month() && cdr.Day() == last.Day())
+	//return !(cdr.Unix() == last.Unix())
+}
+
 func (ad *AsyncDao) Run() {
 	var cache []*VoipRestoredCdr
 	duration := time.Duration(ad.c.FlushPeriod) * time.Second
 	timer := time.NewTimer(duration)
 
+	lastTime := time.Time{}
+
 	go func() {
 		for {
 			select {
 			case m := <-ad.msgQ:
+				// 如需要创建新表，先建表，再刷新缓存到旧表
+				if ad.needToCreateTable(m.CreateTimeX, lastTime) {
+					lastTime = time.Now()
+					CreateTable("voip_restored_cdr_" + m.CreateTimeX.Format("20060102"))
+					MultiInsertCDR(cache)
+					cache = cache[:0]
+				}
+
 				cache = append(cache, m)
 				if len(cache) == ad.c.MaxFlushCapacity {
 					MultiInsertCDR(cache)
@@ -57,24 +74,25 @@ func (ad *AsyncDao) LogCDR(cdr *VoipRestoredCdr) {
 }
 
 type VoipRestoredCdr struct {
-	Id             int64  `json:"id"`
-	Uuid           string `json:"uuid"`
-	CallId         string `json:"callId"`
-	CallerIp       string `json:"callerIp"`
-	CallerPort     int    `json:"callerPort"`
-	CalleeIp       string `json:"calleeIp"`
-	CalleePort     int    `json:"calleePort"`
-	CallerNum      string `json:"callerNum"`
-	CalleeNum      string `json:"calleeNum"`
-	CallerDevice   string `json:"callerDevice"`
-	CalleeDevice   string `json:"calleeDevice"`
-	CalleeProvince string `json:"calleeProvince"`
-	CalleeCity     string `json:"calleeCity"`
-	ConnectTime    int64  `json:"connectTime"`
-	DisconnectTime int64  `json:"disconnectTime"`
-	Duration       int    `json:"duration"`
-	FraudType      string `json:"fraudType"`
-	CreateTime     string `json:"createTime"`
+	Id             int64     `json:"id"`
+	Uuid           string    `json:"uuid"`
+	CallId         string    `json:"callId"`
+	CallerIp       string    `json:"callerIp"`
+	CallerPort     int       `json:"callerPort"`
+	CalleeIp       string    `json:"calleeIp"`
+	CalleePort     int       `json:"calleePort"`
+	CallerNum      string    `json:"callerNum"`
+	CalleeNum      string    `json:"calleeNum"`
+	CallerDevice   string    `json:"callerDevice"`
+	CalleeDevice   string    `json:"calleeDevice"`
+	CalleeProvince string    `json:"calleeProvince"`
+	CalleeCity     string    `json:"calleeCity"`
+	ConnectTime    int64     `json:"connectTime"`
+	DisconnectTime int64     `json:"disconnectTime"`
+	Duration       int       `json:"duration"`
+	FraudType      string    `json:"fraudType"`
+	CreateTime     string    `json:"createTime"`
+	CreateTimeX    time.Time `json:"-" orm:"-"`
 }
 
 // json序列化只需要省市字段
