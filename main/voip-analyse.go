@@ -73,7 +73,7 @@ func main() {
 	/* sip包数据消费者 */
 	c := conf.Conf.Kafka.SipPacketConsumer
 	for i := 1; i <= c.GroupMembers; i++ {
-		clientID := fmt.Sprintf("VoipAnalysisClient_%02d", i)
+		clientID := fmt.Sprintf("GroupClient_%02d", i)
 		sipPacketConsumer := kafka.NewConsumerGroupMember(c, clientID, model.AnalyzePacket)
 		if sipPacketConsumer == nil {
 			os.Exit(-1)

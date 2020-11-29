@@ -25,7 +25,7 @@ package kafka
 ////	cc     *ConsumerConfig
 ////	fun    ConsumerHandler
 ////	Next   *Producer
-////	Count  int64
+////	TotalCount  int64
 ////	Time   time.Time
 ////	ticker time.Ticker
 ////}

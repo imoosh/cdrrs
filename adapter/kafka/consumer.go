@@ -18,18 +18,23 @@ type ConsumerConfig struct {
 	Broker string
 	Group  string
 
-	GroupMembers int
+	GroupMembers        int
+	FlowRateFlushPeriod int
 }
 
 type ConsumerHandler func(*ConsumerGroupMember, interface{}, interface{})
 
 type ConsumerGroupMember struct {
 	sarama.ConsumerGroup
-	clientID string
+	ClientID string
 	errs     []error
 
-	Next   *Producer
-	handle ConsumerHandler
+	Next       *Producer
+	handle     ConsumerHandler
+	TotalCount uint64
+	LastCount  uint64
+	Timer      *time.Timer
+	Conf       *ConsumerConfig
 }
 
 func NewConsumerGroupMember(c *ConsumerConfig, clientID string, handle ConsumerHandler) *ConsumerGroupMember {
@@ -48,8 +53,12 @@ func NewConsumerGroupMember(c *ConsumerConfig, clientID string, handle ConsumerH
 
 	member := &ConsumerGroupMember{
 		ConsumerGroup: group,
-		clientID:      clientID,
+		ClientID:      clientID,
 		handle:        handle,
+		TotalCount:    0,
+		LastCount:     0,
+		Timer:         time.NewTimer(time.Second * time.Duration(c.FlowRateFlushPeriod)),
+		Conf:          c,
 	}
 	go member.loop(strings.Split(c.Topic, ","))
 	return member
@@ -61,6 +70,18 @@ func (m *ConsumerGroupMember) loop(topics []string) {
 		for err := range m.Errors() {
 			_ = m.Close()
 			m.errs = append(m.errs, err)
+		}
+	}()
+
+	// 统计流量
+	go func() {
+		for {
+			select {
+			case <-m.Timer.C:
+				log.Debugf("%s flow rate: %d pps, total: %d", m.ClientID, (m.TotalCount-m.LastCount)/uint64(m.Conf.FlowRateFlushPeriod), m.TotalCount)
+				m.LastCount = m.TotalCount
+				m.Timer.Reset(time.Second * time.Duration(m.Conf.FlowRateFlushPeriod))
+			}
 		}
 	}()
 
@@ -95,7 +116,7 @@ func (m *ConsumerGroupMember) ConsumeClaim(s sarama.ConsumerGroupSession, c sara
 		// TODO
 		m.handle(m, msg.Key, msg.Value)
 		count[int(msg.Partition)]++
-		log.Debugf("ClientID: %s, Topic: %s, Partition: %d, Offset: %d, Count: %d", m.clientID, msg.Topic, msg.Partition, msg.Offset, count[int(msg.Partition)])
+		//log.Debugf("ClientID: %s, Topic: %s, Partition: %d, Offset: %d, TotalCount: %d", m.ClientID, msg.Topic, msg.Partition, msg.Offset, count[int(msg.Partition)])
 
 		s.MarkMessage(msg, "")
 	}
