@@ -39,7 +39,7 @@ func (ad *AsyncDao) needToCreateTable(cdr, last time.Time) bool {
 func (ad *AsyncDao) Run() {
 	var cache []*VoipRestoredCdr
 	duration := time.Duration(ad.c.FlushPeriod) * time.Second
-	timer := time.NewTimer(duration)
+	ticker := time.NewTicker(duration)
 
 	lastTime := time.Time{}
 
@@ -50,20 +50,21 @@ func (ad *AsyncDao) Run() {
 				// 如需要创建新表，先建表，再刷新缓存到旧表
 				if ad.needToCreateTable(m.CreateTimeX, lastTime) {
 					lastTime = time.Now()
-					CreateTable("voip_restored_cdr_" + m.CreateTimeX.Format("20060102"))
-					MultiInsertCDR(cache)
-					cache = cache[:0]
+					//CreateTable("voip_restored_cdr_" + m.CreateTimeX.Format("20060102"))
+					CreateTable("voip_restored_cdr_" + lastTime.Format("20060102150405"))
+					// 将前一天的部分话单先入旧库
+					MultiInsertCDR(lastTime.Format("20060102150405"), cache)
+					cache = cache[0:0]
 				}
 
 				cache = append(cache, m)
 				if len(cache) == ad.c.MaxFlushCapacity {
-					MultiInsertCDR(cache)
-					cache = cache[:0]
+					MultiInsertCDR(lastTime.Format("20060102150405"), cache)
+					cache = cache[0:0]
 				}
-			case <-timer.C:
-				MultiInsertCDR(cache)
-				cache = cache[:0]
-				timer.Reset(duration)
+			case <-ticker.C:
+				MultiInsertCDR(lastTime.Format("20060102150405"), cache)
+				cache = cache[0:0]
 			}
 		}
 	}()
@@ -76,7 +77,6 @@ func (ad *AsyncDao) LogCDR(cdr *VoipRestoredCdr) {
 type VoipRestoredCdr struct {
 	Id             int64     `json:"id"`
 	Uuid           string    `json:"uuid"`
-	CallId         string    `json:"callId"`
 	CallerIp       string    `json:"callerIp"`
 	CallerPort     int       `json:"callerPort"`
 	CalleeIp       string    `json:"calleeIp"`
@@ -92,6 +92,7 @@ type VoipRestoredCdr struct {
 	Duration       int       `json:"duration"`
 	FraudType      string    `json:"fraudType"`
 	CreateTime     string    `json:"createTime"`
+	CallId         string    `json:"callId"`
 	CreateTimeX    time.Time `json:"-" orm:"-"`
 }
 

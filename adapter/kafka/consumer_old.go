@@ -6,7 +6,7 @@ package kafka
 
 //type ConsumerHandler func(*Consumer, interface{}, interface{})
 //
-//// Consumer Consumer配置
+// Consumer Consumer配置
 //type ConsumerConfig struct {
 //	Topic       string
 //	splitTopic  []string
@@ -20,38 +20,34 @@ package kafka
 //	GroupMembers int
 //}
 //
-////type Consumer struct {
-////	sc     *sarama.Config
-////	cc     *ConsumerConfig
-////	fun    ConsumerHandler
-////	Next   *Producer
-////	TotalCount  int64
-////	Time   time.Time
-////	ticker time.Ticker
-////}
-//
-////func NewConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
-////	return newConsumer(cc, fun)
-////}
+//type Consumer struct {
+//	sc         *sarama.Config
+//	cc         *ConsumerConfig
+//	fun        ConsumerHandler
+//	Next       *Producer
+//	TotalCount int64
+//	Time       time.Time
+//	ticker     time.Ticker
+//}
+
+//func NewConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
+//	return newConsumer(cc, fun)
+//}
 //
 //func newConsumer(cc *ConsumerConfig, fun ConsumerHandler) *Consumer {
-//	ver, err := sarama.ParseKafkaVersion(cc.Version)
-//	if err != nil {
-//		log.Error(err)
-//		return nil
-//	}
-//
-//	if cc.splitTopic = strings.Split(cc.Topic, ","); len(cc.splitTopic) == 0 {
-//		log.Errorf("invalid arguments: WrappedConsumer.cc.Topic = %s\n", cc.Topic)
-//		return nil
-//	}
-//	if cc.splitBroker = strings.Split(cc.Broker, ","); len(cc.splitBroker) == 0 {
-//		log.Errorf("invalid arguments: WrappedConsumer.cc.Broker = %s\n", cc.Broker)
-//		return nil
-//	}
 //
 //	sc := sarama.NewConfig()
-//	sc.Version = ver
+//	sc.Version = sarama.V2_0_0_0
+//	sc.Consumer.Offsets.Initial = sarama.OffsetOldest
+//
+//	return &Consumer{
+//		sc:         sc,
+//		cc:         cc,
+//		fun:        fun,
+//		Next:       nil,
+//		TotalCount: 0,
+//		Time:       time.Time{},
+//	}
 //}
 //
 //func (ac *Consumer) SetNextProducer(producer *Producer) {
@@ -60,18 +56,18 @@ package kafka
 //
 //func (ac *Consumer) Run() error {
 //	cgHandler := consumerGroupHandler{fun: ac.fun, customConsumer: ac}
-//	group, err := sarama.NewConsumerGroup(ac.cc.splitBroker, ac.cc.Group, ac.sc)
+//	group, err := sarama.NewConsumerGroup(strings.Split(ac.cc.Broker, ","), ac.cc.Group, ac.sc)
 //	if err != nil {
 //		panic(err)
 //	}
 //	//defer func() { _ = group.Close() }()
 //
-//    ctx := make([]context.Context, ac.cc.GroupMembers)
+//	ctx := make([]context.Context, ac.cc.GroupMembers)
 //	for i := 0; i < ac.cc.GroupMembers; i++ {
-//        ctx[i], _ = context.WithCancel(context.Background())
+//		ctx[i], _ = context.WithCancel(context.Background())
 //		go func(i int) {
 //			for {
-//				err := group.Consume(ctx[i], ac.cc.splitTopic, &cgHandler)
+//				err := group.Consume(ctx[i], strings.Split(ac.cc.Topic, ","), &cgHandler)
 //				if err != nil {
 //					log.Error(err)
 //					time.Sleep(time.Second * 5)
@@ -82,7 +78,7 @@ package kafka
 //
 //	return nil
 //}
-//
+
 //func (ac *Consumer) DeleteTopic(topic string) {
 //	ver, err := sarama.ParseKafkaVersion(ac.cc.Version)
 //	if err != nil {

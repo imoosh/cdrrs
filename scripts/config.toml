@@ -9,35 +9,42 @@
     maxAge = 7
     maxSize =  10
 
+[fileParser]
+    rootPath = "/"
+    startDatePath = "202012/20201201"
+    maxParseProcs = 200
+
 [kafka]
     # sip原始消息生产者
     [kafka.sipPacketProducer]
-        topic = "SipPacket"
+        topic = "RawVoipPacket"
         broker = "192.168.1.205:9092"
         frequency = 500
         maxMessage = 1000000
 
     # sip消息分析消费者
     [kafka.sipPacketConsumer]
-        topic = "SipPacket"
+        topic = "RawVoipPacket"
         broker = "192.168.1.205:9092"
-        group = "VoipAnalytic"
+        group = "VoipAnalyticGroup"
         groupMembers = 1
+        # 统计流速时间间隔
         flowRateFlushPeriod = 3
 
     # 待还原话单数据生产者
     [kafka.restoreCDRProducer]
-        topic = "restoreCDRData"
+        topic = "SemiFinishedCDR"
         broker = "192.168.1.205:9092"
         frequency = 500
         maxMessage = 1000000
 
     # 话单数据生产者
     [kafka.restoreCDRConsumer]
-        topic = "restoreCDRData"
+        topic = "SemiFinishedCDR"
         broker = "192.168.1.205:9092"
-        group = "CDRRestore"
+        group = "CDRRestoreGroup"
         groupMembers = 1
+        # 统计流速时间间隔
         flowRateFlushPeriod = 3
 
     # 诈骗模型服务
@@ -59,7 +66,7 @@
     # 话单批量插入条数
     maxFlushCapacity = 5000
     # 话单缓存最大数量
-    maxCacheCapacity = 10000
+    maxCacheCapacity = 20000
 
 [redis]
     host = "192.168.1.205:6379"
@@ -67,4 +74,5 @@
     idleTimeout = 600
     maxIdle = 10
     maxActive = 10000
-    cacheExpire = 3600
+    # 缓存失效时间默认为30m
+    cacheExpire = 1800

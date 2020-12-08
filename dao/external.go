@@ -3,8 +3,8 @@ package dao
 import (
 	"bytes"
 	"centnet-cdrrs/library/log"
-	"centnet-cdrrs/prot/sip"
-	"centnet-cdrrs/prot/udp"
+	"centnet-cdrrs/model/prot/sip"
+	"centnet-cdrrs/model/prot/udp"
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego/orm"
@@ -124,13 +124,16 @@ func CreateTable(tableName string) {
 	}
 }
 
-func MultiInsertCDR(cdrs []*VoipRestoredCdr) {
+var cdrsCount = 0
+
+func MultiInsertCDR(subname string, cdrs []*VoipRestoredCdr) {
 	if len(cdrs) == 0 {
 		return
 	}
 
+	sql := "INSERT INTO voip_restored_cdr_" + subname + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
 	//sql := "INSERT INTO voip_restored_cdr_" + cdrs[0].CreateTimeX.Format("20060102150405") + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
-	sql := "INSERT INTO voip_restored_cdr_" + cdrs[0].CreateTimeX.Format("20060102") + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
+	//sql := "INSERT INTO voip_restored_cdr_" + cdrs[0].CreateTimeX.Format("20060102") + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
 	buf := bytes.Buffer{}
 	buf.Write([]byte(sql))
 	for _, cdr := range cdrs {
@@ -146,7 +149,8 @@ func MultiInsertCDR(cdrs []*VoipRestoredCdr) {
 		log.Error(err)
 	}
 
-	log.Debugf("%d CDRs insert into table voip_restored_cdr_%s", len(cdrs), cdrs[0].CreateTimeX.Format("20060102"))
+	cdrsCount = cdrsCount + len(cdrs)
+	log.Debugf("%d/%d CDRs insert into 'voip_restored_cdr_%s'", len(cdrs), cdrsCount, subname)
 }
 
 func LogCDR(cdr *VoipRestoredCdr) {

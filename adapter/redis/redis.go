@@ -1,14 +1,8 @@
 package redis
 
 import (
-	"centnet-cdrrs/library/log"
-	"errors"
-	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"time"
 )
-
-var redisConn *Conn
 
 type Config struct {
 	Host        string
@@ -19,112 +13,91 @@ type Config struct {
 	CacheExpire int
 }
 
-type Conn struct {
-	conn redis.Conn
-	Conf Config
+type DelayHandleUnit struct {
+	Func func(interface{}, interface{}) interface{}
+	Args interface{}
 }
 
-func NewRedisConn(c *Config) (*Conn, error) {
-	conn, err := redis.Dial("tcp", c.Host)
-	if err != nil {
-		log.Error(err)
-		return nil, errors.New(fmt.Sprintf("redis.Dial %s failed", c.Host))
-	}
-	return &Conn{conn: conn, Conf: *c}, nil
+type collection chan (<-chan interface{})
+
+type RedisPipeline struct {
+	todoQueue collection
+	cmdSocket *runner
+
+	ResultFunc func(unit DelayHandleUnit, result CmdResult)
 }
 
-func (rc *Conn) Close() {
-	rc.conn.Close()
+var (
+	redisPipeline        RedisPipeline
+	emptyDelayHandleUnit = DelayHandleUnit{Func: nil, Args: nil}
+)
+
+func (rp *RedisPipeline) asyncStore(k, v string) {
+
+	c := command{name: "SET", args: []interface{}{k, v}, todo: make(chan interface{}, 2)}
+	c.todo <- emptyDelayHandleUnit
+	rp.cmdSocket.send <- c
+	rp.todoQueue <- c.todo
 }
 
-func (rc *Conn) Put(k, v string) error {
-	if _, err := rc.conn.Do("SET", k, v); err != nil {
-		log.Error(err)
-		return errors.New(fmt.Sprintf("redis command: SET %s %s error", k, v))
-	}
-	return nil
+func (rp *RedisPipeline) asyncStoreWithExpire(k, v string, expire int) {
+
+	c := command{name: "SETEX", args: []interface{}{k, expire, v}, todo: make(chan interface{}, 2)}
+	c.todo <- emptyDelayHandleUnit
+	rp.cmdSocket.send <- c
+	rp.todoQueue <- c.todo
 }
 
-func (rc *Conn) PutWithExpire(k, v string, expire int) error {
-	if _, err := rc.conn.Do("SETEX", k, expire, v); err != nil {
-		log.Error(err)
-		return errors.New(fmt.Sprintf("redis command: SETEX %s %d %s error", k, expire, v))
-	}
-	return nil
+func (rp *RedisPipeline) asyncLoad(k string, u DelayHandleUnit) {
+	c := command{name: "GET", args: []interface{}{k}, todo: make(chan interface{}, 2)}
+
+	// 1、延迟处理单元先放入通道，2、查询结果后放入
+	c.todo <- u
+	// 发送没命令
+	rp.cmdSocket.send <- c
+	// 处理结果以item为单元
+	rp.todoQueue <- c.todo
 }
 
-func (rc *Conn) Delete(k string) error {
-	if _, err := rc.conn.Do("DEL", k); err != nil {
-		log.Error(err)
-		return errors.New(fmt.Sprintf("redis command: DEL %s error", k))
-	}
-	return nil
+func (rp *RedisPipeline) asyncDelete(k string) {
+	c := command{name: "DEL", args: []interface{}{k}, todo: make(chan interface{}, 2)}
+	c.todo <- emptyDelayHandleUnit
+	rp.cmdSocket.send <- c
+	rp.todoQueue <- c.todo
 }
 
-func (rc *Conn) Get(k string) (string, error) {
-	v, err := redis.String(rc.conn.Do("GET", k))
-	if err == redis.ErrNil {
-		return "", nil
+func (rp *RedisPipeline) asyncCollectResult() {
+	for r := range rp.todoQueue {
+		// 异步处理redis查询结果 model.HandleRedisResult
+		rp.ResultFunc((<-r).(DelayHandleUnit), (<-r).(CmdResult))
 	}
-	if err != nil {
-		log.Error(err)
-		return "", errors.New(fmt.Sprintf("redis command: GET %s error", k))
-	}
-
-	return v, nil
 }
 
-func (rc *Conn) Test() bool {
-	t := time.Now()
-	err := rc.Put("abc", "123")
-	if err != nil {
-		log.Errorf("redis test: 'put abc 123' error")
-		return false
-	}
-	log.Debug("redis test: 'put abc 123' ok, take: ", time.Since(t))
-
-	t = time.Now()
-	v, err := rc.Get("abc")
-	if err != nil {
-		log.Errorf("redis test: 'get abc' error")
-		return false
-	}
-	log.Debugf("redis test: 'get abc %s' ok, take: %s", v, time.Since(t))
-
-	t = time.Now()
-	err = rc.Delete("abc")
-	if err != nil {
-		log.Errorf("redis test: 'del abc' error")
-		return false
-	}
-	log.Debugf("redis test: 'del abc' ok, take %s", time.Since(t))
-
-	t = time.Now()
-	err = rc.PutWithExpire("abc", "123", 1)
-	if err != nil {
-		log.Errorf("redis test: 'set abc 1 123' error")
-		return false
-	}
-	//time.Sleep(time.Second * 2)
-	v, err = rc.Get("abc")
-	if err != nil {
-		log.Errorf("redis test: 'get abc' error")
-	}
-
-	return true
+func AsyncStore(k, v string) {
+	redisPipeline.asyncStore(k, v)
 }
 
-func Init(c *Config) error {
-	var err error
-	redisConn, err = NewRedisConn(c)
-	if err != nil {
-		log.Error(err)
-		return errors.New("new redis connection error")
+func AsyncStoreWithExpire(k, v string, expire time.Duration) {
+	redisPipeline.asyncStoreWithExpire(k, v, int(expire.Seconds()))
+}
+
+func AsyncLoad(k string, unit DelayHandleUnit) {
+	redisPipeline.asyncLoad(k, unit)
+}
+
+func AsyncDelete(k string) {
+	redisPipeline.asyncDelete(k)
+}
+
+func Init(c *Config, fun func(unit DelayHandleUnit, result CmdResult)) error {
+
+	redisPipeline = RedisPipeline{
+		todoQueue:  make(collection, 10000),
+		cmdSocket:  newRunner(newPool(c).Get()),
+		ResultFunc: fun,
 	}
 
-	if !redisConn.Test() {
-		return errors.New("redis test failed")
-	}
+	go redisPipeline.asyncCollectResult()
 
 	return nil
 }

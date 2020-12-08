@@ -33,6 +33,8 @@ type ConsumerGroupMember struct {
 	handle     ConsumerHandler
 	TotalCount uint64
 	LastCount  uint64
+	TotalBytes uint64
+	LastBytes  uint64
 	Timer      *time.Timer
 	Conf       *ConsumerConfig
 }
@@ -41,10 +43,8 @@ func NewConsumerGroupMember(c *ConsumerConfig, clientID string, handle ConsumerH
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_0_0_0
 	config.ClientID = clientID
-	config.Consumer.Return.Errors = true
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	config.Consumer.Group.Rebalance.Timeout = 10 * time.Second
 
+	log.Debug("Broker: ", c.Broker, ", Topic: ", c.Topic)
 	group, err := sarama.NewConsumerGroup(strings.Split(c.Broker, ","), c.Group, config)
 	if err != nil {
 		log.Error(err)
@@ -55,8 +55,6 @@ func NewConsumerGroupMember(c *ConsumerConfig, clientID string, handle ConsumerH
 		ConsumerGroup: group,
 		ClientID:      clientID,
 		handle:        handle,
-		TotalCount:    0,
-		LastCount:     0,
 		Timer:         time.NewTimer(time.Second * time.Duration(c.FlowRateFlushPeriod)),
 		Conf:          c,
 	}
@@ -70,6 +68,7 @@ func (m *ConsumerGroupMember) loop(topics []string) {
 		for err := range m.Errors() {
 			_ = m.Close()
 			m.errs = append(m.errs, err)
+			log.Debug(err)
 		}
 	}()
 
@@ -78,8 +77,15 @@ func (m *ConsumerGroupMember) loop(topics []string) {
 		for {
 			select {
 			case <-m.Timer.C:
-				log.Debugf("%s flow rate: %d pps, total: %d", m.ClientID, (m.TotalCount-m.LastCount)/uint64(m.Conf.FlowRateFlushPeriod), m.TotalCount)
+				pktRate := (m.TotalCount - m.LastCount) / uint64(m.Conf.FlowRateFlushPeriod)
+				bytesRate := float64(m.TotalBytes-m.LastBytes) / float64(m.Conf.FlowRateFlushPeriod) / 1024.0 / 1024.0 * 8
+				if int(bytesRate*1000) < 10 && bytesRate != 0 {
+					bytesRate = 0.01
+				}
+				log.Debugf("[%s] processing speed: %d pps, %.2f Mbps, %d packets", m.ClientID, pktRate, bytesRate, m.TotalCount)
+
 				m.LastCount = m.TotalCount
+				m.LastBytes = m.TotalBytes
 				m.Timer.Reset(time.Second * time.Duration(m.Conf.FlowRateFlushPeriod))
 			}
 		}
@@ -88,11 +94,9 @@ func (m *ConsumerGroupMember) loop(topics []string) {
 	// 循环消费
 	ctx := context.Background()
 	for {
-		if err := m.Consume(ctx, topics, m); err == sarama.ErrClosedConsumerGroup {
-			return
-		} else if err != nil {
-			m.errs = append(m.errs, err)
-			return
+		if err := m.Consume(ctx, topics, m); err != nil {
+			log.Debug(err)
+			time.Sleep(time.Second * 5)
 		}
 	}
 }
@@ -109,16 +113,14 @@ func (m *ConsumerGroupMember) Cleanup(s sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-func (m *ConsumerGroupMember) ConsumeClaim(s sarama.ConsumerGroupSession, c sarama.ConsumerGroupClaim) error {
+func (m *ConsumerGroupMember) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 
-	count := make(map[int]int)
-	for msg := range c.Messages() {
+	for msg := range claim.Messages() {
 		// TODO
 		m.handle(m, msg.Key, msg.Value)
-		count[int(msg.Partition)]++
-		//log.Debugf("ClientID: %s, Topic: %s, Partition: %d, Offset: %d, TotalCount: %d", m.ClientID, msg.Topic, msg.Partition, msg.Offset, count[int(msg.Partition)])
+		//log.Debugf("ClientID: %session, Topic: %session, Partition: %d, Offset: %d, TotalCount: %d", m.ClientID, msg.Topic, msg.Partition, msg.Offset)
 
-		s.MarkMessage(msg, "")
+		session.MarkMessage(msg, "")
 	}
 	return nil
 }
