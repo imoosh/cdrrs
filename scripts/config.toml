@@ -14,10 +14,6 @@
     startDatePath = "202012/20201201"
     maxParseProcs = 200
 
-[cdr]
-    # 输出话单级别 1: 被叫为手机号码，2：被叫为手机或座机，3：被叫为所有有效号码
-    cdrRestoreLevel = 2
-
 [kafka]
     # 诈骗模型服务
     [kafka.fraudModelProducer]

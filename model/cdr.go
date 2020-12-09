@@ -15,7 +15,7 @@ var fraudAnalysisModel *kafka.Producer
 
 var redisResultCount = 0
 
-func HandleRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
+func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 	redisResultCount++
 	if redisResultCount%10000 == 0 {
 		log.Debug("redis result count:", redisResultCount)
@@ -31,16 +31,38 @@ func HandleRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 
 	switch result.Value.(type) {
 	case nil:
-		sipmsg := unit.Args.(AnalyticSipPacket)
-		if sipmsg.CseqMethod == "INVITE" {
-			log.Error("### cannot find bye 200 ok:", sipmsg.CallId)
-		} else if sipmsg.CseqMethod == "BYE" {
-			log.Error("### cannot find invite 200 ok:", sipmsg.CallId)
+		pkt := unit.Args.(AnalyticSipPacket)
+		if pkt.CseqMethod == "INVITE" {
+			log.Error("cannot find BYE-200OK: ", pkt.CallId)
+		} else if pkt.CseqMethod == "BYE" {
+			log.Error("cannot find INVITE-200OK: ", pkt.CallId)
 		} else {
-			log.Error("### invalid sip message")
+			log.Error("invalid sip message")
 		}
+
+		// 同一sip会话中，INVITE-200OK与BYE-200OK，会严格控制只有一个包缓存至Redis。
+		// 在正常情况下，在每条Redis的Key超时删除之前，一定会GET到数据的，（例外: DoLine接口分别同时处理两种包时）
+		// 但由于多routine任务调度，GET命令会在SET命令之前发送至Redis服务器，导致GET失败。
+		// 所以在这里尝试从新GET数据，并且保证同一Key只尝试从新GET一次数据（使用GetAgain标记）
+		//
+		// 使用go func()异步处理原因：
+		// 1、DoRedisResult函数中，range todoQueue处理流程里不能直接或间接使用todoQueue <- x
+		// 2、进入从新GET数据流程概率极低，极少开启go func()异步处理，所以不会增加多少系统负担
+		if pkt.GetAgain {
+			//return
+		}
+		go func(asp AnalyticSipPacket) {
+			asp.GetAgain = true
+			redis.AsyncLoad(asp.CallId, redis.DelayHandleUnit{
+				Func: cdrRestore,
+				Args: asp,
+			})
+
+			// 获取到后，立即删除缓存
+			redis.AsyncDelete(asp.CallId)
+		}(pkt)
+
 	case string:
-		log.Debug("### ", result.Value.(string))
 	case []byte:
 		var pkt AnalyticSipPacket
 		err := json.Unmarshal(result.Value.([]byte), &pkt)
@@ -149,7 +171,8 @@ func Init() error {
 	/* 还原的话单数据交给诈骗分析模型 */
 	producerConfig := conf.Conf.Kafka.FraudModelProducer
 	if producerConfig.Enable {
-		fraudAnalysisModel, err := kafka.NewProducer(producerConfig)
+		var err error
+		fraudAnalysisModel, err = kafka.NewProducer(producerConfig)
 		if err != nil {
 			log.Error(err)
 			return err

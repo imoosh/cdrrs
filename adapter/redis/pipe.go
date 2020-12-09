@@ -4,9 +4,8 @@ package redis
 
 import (
 	"centnet-cdrrs/library/log"
-	"time"
-
 	"github.com/gomodule/redigo/redis"
+	"time"
 )
 
 type command struct {

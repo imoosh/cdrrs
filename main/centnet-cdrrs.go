@@ -62,7 +62,7 @@ func main() {
 	log.Init(conf.Conf.Logging)
 
 	/* redis初始化 */
-	if err = redis.Init(conf.Conf.Redis, model.HandleRedisResult); err != nil {
+	if err = redis.Init(conf.Conf.Redis, model.DoRedisResult); err != nil {
 		log.Error(err)
 		os.Exit(-1)
 	}
@@ -80,7 +80,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	/* 开启解析 */
+	/* 开启文件解析 */
 	file.NewRawFileParser(conf.Conf.FileParser).Run(model.DoLine)
 
 	// os signal

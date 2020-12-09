@@ -23,8 +23,6 @@ type collection chan (<-chan interface{})
 type RedisPipeline struct {
 	todoQueue collection
 	cmdSocket *runner
-
-	ResultFunc func(unit DelayHandleUnit, result CmdResult)
 }
 
 var (
@@ -66,10 +64,10 @@ func (rp *RedisPipeline) asyncDelete(k string) {
 	rp.todoQueue <- c.todo
 }
 
-func (rp *RedisPipeline) asyncCollectResult() {
+func (rp *RedisPipeline) asyncCollectResult(doResultFunc func(unit DelayHandleUnit, result CmdResult)) {
 	for r := range rp.todoQueue {
 		// 异步处理redis查询结果 model.HandleRedisResult
-		rp.ResultFunc((<-r).(DelayHandleUnit), (<-r).(CmdResult))
+		doResultFunc((<-r).(DelayHandleUnit), (<-r).(CmdResult))
 	}
 }
 
@@ -92,12 +90,11 @@ func AsyncDelete(k string) {
 func Init(c *Config, fun func(unit DelayHandleUnit, result CmdResult)) error {
 
 	redisPipeline = RedisPipeline{
-		todoQueue:  make(collection, 10000),
-		cmdSocket:  newRunner(newPool(c).Get()),
-		ResultFunc: fun,
+		todoQueue: make(collection, 10000),
+		cmdSocket: newRunner(newPool(c).Get()),
 	}
 
-	go redisPipeline.asyncCollectResult()
+	go redisPipeline.asyncCollectResult(fun)
 
 	return nil
 }

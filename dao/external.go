@@ -116,7 +116,9 @@ func CreateTable(tableName string) {
 		"`duration` int(8) DEFAULT '0' COMMENT '通话时长'," +
 		"`fraud_type` varchar(32) DEFAULT NULL COMMENT '诈骗类型'," +
 		"`create_time` datetime DEFAULT NULL COMMENT '生成时间'," +
-		"PRIMARY KEY (`id`), UNIQUE KEY `cdr_id` (`id`) USING BTREE) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"
+		"PRIMARY KEY (`id`)," +
+		"UNIQUE KEY `cdr_uuid` (`uuid`) USING BTREE" +
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"
 
 	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
@@ -124,7 +126,7 @@ func CreateTable(tableName string) {
 	}
 }
 
-var cdrsCount = 0
+var cdrsCount uint64 = 0
 
 func MultiInsertCDR(subname string, cdrs []*VoipRestoredCdr) {
 	if len(cdrs) == 0 {
@@ -149,8 +151,8 @@ func MultiInsertCDR(subname string, cdrs []*VoipRestoredCdr) {
 		log.Error(err)
 	}
 
-	cdrsCount = cdrsCount + len(cdrs)
-	log.Debugf("%d/%d CDRs insert into 'voip_restored_cdr_%s'", len(cdrs), cdrsCount, subname)
+	cdrsCount = cdrsCount + uint64(len(cdrs))
+	log.Debugf("%d CDRs (total %d) -> 'voip_restored_cdr_%s'", len(cdrs), cdrsCount, subname)
 }
 
 func LogCDR(cdr *VoipRestoredCdr) {

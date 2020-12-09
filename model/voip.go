@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	InviteCallIdPrefix = "i"
-	ByeCallIdPrefix    = "b"
+	InviteCallIdPrefix = iota
+	ByeCallIdPrefix
 )
 
 var (
@@ -50,7 +50,8 @@ type AnalyticSipPacket struct {
 	ContactPort   int    `json:"contactPort"`
 	UserAgent     string `json:"userAgent"`
 
-	CalleeInfo CalleeInfo
+	CalleeInfo CalleeInfo `json:"calleeInfo"`
+	GetAgain   bool       `json:"getAgain"`
 }
 
 type CalleeInfo struct {
@@ -71,37 +72,36 @@ func putByeCallIdInCache(id string) (interface{}, bool) {
 }
 
 func isInviteCallIdInCache(id string) bool {
-	_, ok := CallIdCache.Get(InviteCallIdPrefix + id)
+	_, ok := CallIdCache.Get(id)
 	return ok
 }
 
 func isByeCallIdInCache(id string) bool {
-	_, ok := CallIdCache.Get(ByeCallIdPrefix + id)
+	_, ok := CallIdCache.Get(id)
 	return ok
 }
 
 func deleteInviteCallIdCache(id string) {
-	CallIdCache.Del(InviteCallIdPrefix + id)
+	CallIdCache.Del(id)
 }
 
 func deleteByeCallIdCache(id string) {
-	CallIdCache.Del(ByeCallIdPrefix + id)
+	CallIdCache.Del(id)
 }
 
 func doInvite200OKMessage(pkt AnalyticSipPacket, key, value string) {
-
 	if v, ok := putInviteCallIdInCache(key); ok {
 		// invite插入redis
 		redis.AsyncStoreWithExpire(key, value, time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
 	} else {
-		if v.(string) == ByeCallIdPrefix {
+		if v.(int) == ByeCallIdPrefix {
 			redis.AsyncLoad(key, redis.DelayHandleUnit{
 				Func: cdrRestore,
 				Args: pkt,
 			})
+			// 获取到后，立即删除缓存
+			redis.AsyncDelete(pkt.CallId)
 		}
-		// 获取到后，立即删除缓存
-		redis.AsyncDelete(pkt.CallId)
 	}
 }
 
@@ -110,14 +110,14 @@ func doBye200OKMessage(pkt AnalyticSipPacket, key, value string) {
 		// invite插入redis
 		redis.AsyncStoreWithExpire(key, value, time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
 	} else {
-		if v.(string) == InviteCallIdPrefix {
+		if v.(int) == InviteCallIdPrefix {
 			redis.AsyncLoad(key, redis.DelayHandleUnit{
 				Func: cdrRestore,
 				Args: pkt,
 			})
+			// 获取到后，立即删除缓存
+			//redis.AsyncDelete(pkt.CallId)
 		}
-		// 获取到后，立即删除缓存
-		redis.AsyncDelete(pkt.CallId)
 	}
 }
 
@@ -201,89 +201,3 @@ func atoi(s string, n int) (int, error) {
 
 	return strconv.Atoi(s)
 }
-
-// 解析sip报文
-//func AnalyzePacket(consumer *kafka.ConsumerGroupMember, key, value interface{}) {
-//
-//	consumer.TotalCount++
-//	consumer.TotalBytes = consumer.TotalBytes + uint64(len(value.([]byte)))
-//
-//	rtd, err := parseRawData(string(value.([]byte)))
-//	if err != nil {
-//		return
-//	}
-//	sipMsg := sip.Parse([]byte(rtd.ParamContent))
-//
-//	//sip.PrintSipStruct(&sipMsg)
-//
-//	pkt := AnalyticSipPacket{
-//		EventId:       rtd.EventId,
-//		EventTime:     rtd.EventTime,
-//		Sip:           rtd.SaddrV4,
-//		Sport:         0,
-//		Dip:           rtd.DaddrV4,
-//		Dport:         0,
-//		CallId:        string(sipMsg.CallId.Value),
-//		CseqMethod:    string(sipMsg.Cseq.Method),
-//		ReqMethod:     string(sipMsg.Req.Method),
-//		ReqStatusCode: 0,
-//		ReqUser:       string(sipMsg.Req.User),
-//		ReqHost:       string(sipMsg.Req.Host),
-//		ReqPort:       0,
-//		FromName:      string(sipMsg.From.Name),
-//		FromUser:      string(sipMsg.From.User),
-//		FromHost:      string(sipMsg.From.Host),
-//		FromPort:      0,
-//		ToName:        string(sipMsg.To.Name),
-//		ToUser:        string(sipMsg.To.User),
-//		ToHost:        string(sipMsg.To.Host),
-//		ToPort:        0,
-//		ContactName:   string(sipMsg.Contact.Name),
-//		ContactUser:   string(sipMsg.Contact.User),
-//		ContactHost:   string(sipMsg.Contact.Host),
-//		ContactPort:   0,
-//		UserAgent:     string(sipMsg.Ua.Value),
-//	}
-//
-//	// 没有call-id、cseq.method、直接丢弃
-//	if len(pkt.CallId) == 0 || len(pkt.CseqMethod) == 0 || len(pkt.ToUser) == 0 {
-//		return
-//	}
-//
-//	// 被叫号码字段未解析出手机号码或坐席号码归属地，直接丢弃(同一会话中所有包的FROM字段或TO字段都一样)
-//	pkt.CalleeInfo, err = parseCalleeInfo(pkt.ToUser)
-//	if err != nil {
-//		log.Debug("DIRTY-DATA:", string(value.([]byte)))
-//		return
-//	}
-//
-//	if pkt.Sport, err = atoi(rtd.Sport, 0); err != nil {
-//		return
-//	}
-//	if pkt.Dport, err = atoi(rtd.Dport, 0); err != nil {
-//		return
-//	}
-//	if pkt.ReqStatusCode, err = atoi(string(sipMsg.Req.StatusCode), 0); err != nil {
-//		return
-//	}
-//	if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
-//		return
-//	}
-//	if pkt.FromPort, err = atoi(string(sipMsg.From.Port), 5060); err != nil {
-//		return
-//	}
-//	if pkt.ToPort, err = atoi(string(sipMsg.To.Port), 5060); err != nil {
-//		return
-//	}
-//	if pkt.ContactPort, err = atoi(string(sipMsg.Contact.Port), 5060); err != nil {
-//		return
-//	}
-//
-//	jsonStr, err := json.Marshal(pkt)
-//	if err != nil {
-//		log.Error(err)
-//		return
-//	}
-//
-//	consumer.Next.Log(string(sipMsg.CallId.Value), string(jsonStr))
-//}

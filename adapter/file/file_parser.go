@@ -185,5 +185,5 @@ func (rfp *RawFileParser) parseFile(x FileInfoX) {
 		}
 		rfp.parseLineFunc(string(line))
 	}
-	log.Debugf("'%s' parse done", x.filepath)
+	log.Debugf("'%s' parsed done", x.filepath)
 }
