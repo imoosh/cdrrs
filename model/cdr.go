@@ -1,13 +1,17 @@
 package model
 
 import (
+	"centnet-cdrrs/adapter/kafka"
 	"centnet-cdrrs/adapter/redis"
+	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
 	"encoding/json"
 	uuid "github.com/satori/go.uuid"
 	"time"
 )
+
+var fraudAnalysisModel *kafka.Producer
 
 var redisResultCount = 0
 
@@ -126,15 +130,32 @@ func cdrRestore(i, b interface{}) interface{} {
 	cdr.CalleeCity = calleeInfo.Pos.City
 
 	// 推送至诈骗分析模型
-	//cdrStr, err := json.Marshal(&cdr)
-	//if err != nil {
-	//	log.Errorf("json.Marshal error: ", err)
-	//	return nil
-	//}
-	//consumer.Next.Log(key, string(cdrStr))
+	if conf.Conf.Kafka.FraudModelProducer.Enable {
+		cdrStr, err := json.Marshal(&cdr)
+		if err != nil {
+			log.Errorf("json.Marshal error: ", err)
+			return nil
+		}
+		fraudAnalysisModel.Log(invite.CallId, string(cdrStr))
+	}
 
 	//插入话单数据库
 	dao.LogCDR(&cdr)
+
+	return nil
+}
+
+func Init() error {
+	/* 还原的话单数据交给诈骗分析模型 */
+	producerConfig := conf.Conf.Kafka.FraudModelProducer
+	if producerConfig.Enable {
+		fraudAnalysisModel, err := kafka.NewProducer(producerConfig)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		fraudAnalysisModel.Run()
+	}
 
 	return nil
 }

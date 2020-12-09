@@ -18,6 +18,7 @@ var pc = ProducerConfig{
 
 // Conf 配置
 type ProducerConfig struct {
+	Enable     bool   `xml:"enable"`
 	Topic      string `xml:"topic"`
 	Broker     string `xml:"broker"`
 	Frequency  int    `xml:"frequency"`

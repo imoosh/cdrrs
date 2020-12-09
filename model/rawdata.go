@@ -151,33 +151,23 @@ func (rtd RawTextData) parseSipPacket() (AnalyticSipPacket, error) {
 	return pkt, nil
 }
 
-//var lineCount = 0
-
 func DoLine(line string) {
-
-	//lineCount++
-	//if lineCount%10000 == 0 {
-	//	log.Debug("parse line count:", lineCount)
-	//}
 
 	// 解析原始包各字段
 	rtd, err := parseRawData(line)
 	if err != nil {
-		log.Debug(err)
 		return
 	}
 
 	// 解析sip报文
 	pkt, err := rtd.parseSipPacket()
 	if err != nil {
-		log.Debug(err)
 		return
 	}
 
 	// 序列化sip报文
 	jsonStr, err := json.Marshal(pkt)
 	if err != nil {
-		log.Error(err)
 		return
 	}
 

@@ -5,6 +5,8 @@ import (
 	"centnet-cdrrs/adapter/file"
 	"centnet-cdrrs/adapter/kafka"
 	"centnet-cdrrs/adapter/redis"
+	"centnet-cdrrs/model"
+
 	//"centnet-cdrrs/adapter/sniffer"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/library/log"
@@ -17,12 +19,12 @@ var (
 )
 
 type Config struct {
-	Logging *log.Config
-	Kafka   *kafka.Config
-	//Sniffer *sniffer.Config
+	Logging    *log.Config
+	Kafka      *kafka.Config
 	Mysql      *dao.Config
 	Redis      *redis.Config
 	FileParser *file.Config
+	CDR        *model.Config
 }
 
 func (c *Config) String() string {

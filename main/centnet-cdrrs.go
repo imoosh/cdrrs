@@ -74,29 +74,14 @@ func main() {
 		os.Exit(-1)
 	}
 
+	err = model.Init()
+	if err != nil {
+		log.Error("model.Init failed")
+		os.Exit(-1)
+	}
+
 	/* 开启解析 */
 	file.NewRawFileParser(conf.Conf.FileParser).Run(model.DoLine)
-
-	/* 还原的话单数据交给诈骗分析模型 */
-	//fraudAnalysisProducer, err := kafka.NewProducer(conf.Conf.Kafka.FraudModelProducer)
-	//if err != nil {
-	//	log.Error(err)
-	//	os.Exit(-1)
-	//}
-	//fraudAnalysisProducer.Run()
-	//
-	//c := conf.Conf.Kafka.RestoreCDRConsumer
-	//for i := 1; i <= c.GroupMembers; i++ {
-	//	clientID := fmt.Sprintf("member_%02d", i)
-	//	sipPacketConsumer := kafka.NewConsumerGroupMember(c, clientID, model.RestoreCDR)
-	//	if sipPacketConsumer == nil {
-	//		log.Error("kafka.NewConsumerGroupMember Error")
-	//		os.Exit(-1)
-	//	}
-	//	sipPacketConsumer.SetNextPipeline(fraudAnalysisProducer)
-	//}
-
-	//mock(fraudAnalysisProducer)
 
 	// os signal
 	sigterm := make(chan os.Signal, 1)
