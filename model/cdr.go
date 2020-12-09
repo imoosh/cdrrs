@@ -49,7 +49,7 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 		// 1、DoRedisResult函数中，range todoQueue处理流程里不能直接或间接使用todoQueue <- x
 		// 2、进入从新GET数据流程概率极低，极少开启go func()异步处理，所以不会增加多少系统负担
 		if pkt.GetAgain {
-			//return
+			return
 		}
 		go func(asp AnalyticSipPacket) {
 			asp.GetAgain = true
@@ -57,9 +57,6 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 				Func: cdrRestore,
 				Args: asp,
 			})
-
-			// 获取到后，立即删除缓存
-			redis.AsyncDelete(asp.CallId)
 		}(pkt)
 
 	case string:
@@ -69,6 +66,9 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 		if err != nil {
 			log.Error(err)
 		}
+
+		// 获取到后，立即删除缓存
+		redis.AsyncDelete(pkt.CallId)
 
 		// 合成话单
 		if pkt.CseqMethod == "INVITE" && unit.Args.(AnalyticSipPacket).CseqMethod == "BYE" {

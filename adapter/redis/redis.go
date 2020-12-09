@@ -18,19 +18,17 @@ type DelayHandleUnit struct {
 	Args interface{}
 }
 
-type collection chan (<-chan interface{})
-
-type RedisPipeline struct {
-	todoQueue collection
+type Pipeline struct {
+	todoQueue chan (<-chan interface{})
 	cmdSocket *runner
 }
 
 var (
-	redisPipeline        RedisPipeline
+	redisPipeline        Pipeline
 	emptyDelayHandleUnit = DelayHandleUnit{Func: nil, Args: nil}
 )
 
-func (rp *RedisPipeline) asyncStore(k, v string) {
+func (rp *Pipeline) asyncStore(k, v string) {
 
 	c := command{name: "SET", args: []interface{}{k, v}, todo: make(chan interface{}, 2)}
 	c.todo <- emptyDelayHandleUnit
@@ -38,7 +36,7 @@ func (rp *RedisPipeline) asyncStore(k, v string) {
 	rp.todoQueue <- c.todo
 }
 
-func (rp *RedisPipeline) asyncStoreWithExpire(k, v string, expire int) {
+func (rp *Pipeline) asyncStoreWithExpire(k, v string, expire int) {
 
 	c := command{name: "SETEX", args: []interface{}{k, expire, v}, todo: make(chan interface{}, 2)}
 	c.todo <- emptyDelayHandleUnit
@@ -46,7 +44,7 @@ func (rp *RedisPipeline) asyncStoreWithExpire(k, v string, expire int) {
 	rp.todoQueue <- c.todo
 }
 
-func (rp *RedisPipeline) asyncLoad(k string, u DelayHandleUnit) {
+func (rp *Pipeline) asyncLoad(k string, u DelayHandleUnit) {
 	c := command{name: "GET", args: []interface{}{k}, todo: make(chan interface{}, 2)}
 
 	// 1、延迟处理单元先放入通道，2、查询结果后放入
@@ -57,18 +55,18 @@ func (rp *RedisPipeline) asyncLoad(k string, u DelayHandleUnit) {
 	rp.todoQueue <- c.todo
 }
 
-func (rp *RedisPipeline) asyncDelete(k string) {
-	c := command{name: "DEL", args: []interface{}{k}, todo: make(chan interface{}, 2)}
-	c.todo <- emptyDelayHandleUnit
-	rp.cmdSocket.send <- c
-	rp.todoQueue <- c.todo
-}
-
-func (rp *RedisPipeline) asyncCollectResult(doResultFunc func(unit DelayHandleUnit, result CmdResult)) {
+func (rp *Pipeline) asyncCollectResult(doResultFunc func(unit DelayHandleUnit, result CmdResult)) {
 	for r := range rp.todoQueue {
 		// 异步处理redis查询结果 model.HandleRedisResult
 		doResultFunc((<-r).(DelayHandleUnit), (<-r).(CmdResult))
 	}
+}
+
+func (rp *Pipeline) asyncDelete(k string) {
+	c := command{name: "DEL", args: []interface{}{k}, todo: make(chan interface{}, 2)}
+	c.todo <- emptyDelayHandleUnit
+	rp.cmdSocket.send <- c
+	//rp.todoQueue <- c.todo
 }
 
 func AsyncStore(k, v string) {
@@ -89,8 +87,8 @@ func AsyncDelete(k string) {
 
 func Init(c *Config, fun func(unit DelayHandleUnit, result CmdResult)) error {
 
-	redisPipeline = RedisPipeline{
-		todoQueue: make(collection, 10000),
+	redisPipeline = Pipeline{
+		todoQueue: make(chan (<-chan interface{}), 10000),
 		cmdSocket: newRunner(newPool(c).Get()),
 	}
 

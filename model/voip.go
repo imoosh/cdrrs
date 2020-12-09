@@ -100,7 +100,7 @@ func doInvite200OKMessage(pkt AnalyticSipPacket, key, value string) {
 				Args: pkt,
 			})
 			// 获取到后，立即删除缓存
-			redis.AsyncDelete(pkt.CallId)
+			//redis.AsyncDelete(pkt.CallId)
 		}
 	}
 }
