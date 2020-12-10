@@ -30,7 +30,6 @@ type runner struct {
 }
 
 func (r *runner) sender() {
-	count := 0
 	ticker := time.NewTicker(time.Second * 3)
 	for {
 		select {
@@ -51,10 +50,6 @@ func (r *runner) sender() {
 				}
 			}
 			r.recv <- cmd.todo
-			count++
-			if count%10000 == 0 {
-				log.Debug("send command count:", count)
-			}
 		case <-ticker.C:
 			if err := r.conn.Flush(); err != nil {
 				log.Error(err)
@@ -82,8 +77,8 @@ func (r *runner) receiver() {
 func newRunner(conn redis.Conn) *runner {
 	r := &runner{
 		conn: conn,
-		send: make(chan command, 4096),
-		recv: make(chan chan interface{}, 4096),
+		send: make(chan command, 4<<10),
+		recv: make(chan chan interface{}, 4<<10),
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
 	}

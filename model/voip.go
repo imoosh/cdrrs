@@ -22,7 +22,7 @@ var (
 )
 
 type AnalyticSipPacket struct {
-	Id            uint64 `json:"id"`
+	//Id            uint64 `json:"id"`
 	EventId       string `json:"eventId"`
 	EventTime     string `json:"eventTime"`
 	Sip           string `json:"sip"`
@@ -31,23 +31,23 @@ type AnalyticSipPacket struct {
 	Dport         int    `json:"dport"`
 	CallId        string `json:"callId"`
 	CseqMethod    string `json:"cseqMethod"`
-	ReqMethod     string `json:"reqMethod"`
 	ReqStatusCode int    `json:"reqStatusCode"`
-	ReqUser       string `json:"reqUser"`
-	ReqHost       string `json:"reqHost"`
-	ReqPort       int    `json:"reqPort"`
-	FromName      string `json:"fromName"`
+	//ReqMethod     string `json:"reqMethod"`
+	//ReqUser       string `json:"reqUser"`
+	//ReqHost       string `json:"reqHost"`
+	//ReqPort       int    `json:"reqPort"`
+	//FromName      string `json:"fromName"`
 	FromUser      string `json:"fromUser"`
-	FromHost      string `json:"fromHost"`
-	FromPort      int    `json:"fromPort"`
-	ToName        string `json:"toName"`
+	//FromHost      string `json:"fromHost"`
+	//FromPort      int    `json:"fromPort"`
+	//ToName        string `json:"toName"`
 	ToUser        string `json:"toUser"`
-	ToHost        string `json:"toHost"`
-	ToPort        int    `json:"toPort"`
-	ContactName   string `json:"contactName"`
-	ContactUser   string `json:"contactUser"`
-	ContactHost   string `json:"contactHost"`
-	ContactPort   int    `json:"contactPort"`
+	//ToHost        string `json:"toHost"`
+	//ToPort        int    `json:"toPort"`
+	//ContactName   string `json:"contactName"`
+	//ContactUser   string `json:"contactUser"`
+	//ContactHost   string `json:"contactHost"`
+	//ContactPort   int    `json:"contactPort"`
 	UserAgent     string `json:"userAgent"`
 
 	CalleeInfo CalleeInfo `json:"calleeInfo"`
@@ -64,11 +64,11 @@ type CalleeInfo struct {
 //}
 
 func putInviteCallIdInCache(id string) (interface{}, bool) {
-	return CallIdCache.SetWithExpire(id, InviteCallIdPrefix, time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
+	return CallIdCache.SetWithExpire(id, InviteCallIdPrefix)
 }
 
 func putByeCallIdInCache(id string) (interface{}, bool) {
-	return CallIdCache.SetWithExpire(id, ByeCallIdPrefix, time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
+	return CallIdCache.SetWithExpire(id, ByeCallIdPrefix)
 }
 
 func isInviteCallIdInCache(id string) bool {
@@ -99,8 +99,6 @@ func doInvite200OKMessage(pkt AnalyticSipPacket, key, value string) {
 				Func: cdrRestore,
 				Args: pkt,
 			})
-			// 获取到后，立即删除缓存
-			//redis.AsyncDelete(pkt.CallId)
 		}
 	}
 }
@@ -115,8 +113,6 @@ func doBye200OKMessage(pkt AnalyticSipPacket, key, value string) {
 				Func: cdrRestore,
 				Args: pkt,
 			})
-			// 获取到后，立即删除缓存
-			//redis.AsyncDelete(pkt.CallId)
 		}
 	}
 }

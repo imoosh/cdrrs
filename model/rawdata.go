@@ -93,23 +93,23 @@ func (rtd RawTextData) parseSipPacket() (AnalyticSipPacket, error) {
 		Dport:         0,
 		CallId:        string(sipMsg.CallId.Value),
 		CseqMethod:    string(sipMsg.Cseq.Method),
-		ReqMethod:     string(sipMsg.Req.Method),
 		ReqStatusCode: 0,
-		ReqUser:       string(sipMsg.Req.User),
-		ReqHost:       string(sipMsg.Req.Host),
-		ReqPort:       0,
-		FromName:      string(sipMsg.From.Name),
+		//ReqMethod:     string(sipMsg.Req.Method),
+		//ReqUser:       string(sipMsg.Req.User),
+		//ReqHost:       string(sipMsg.Req.Host),
+		//ReqPort:       0,
+		//FromName:      string(sipMsg.From.Name),
 		FromUser:      string(sipMsg.From.User),
-		FromHost:      string(sipMsg.From.Host),
-		FromPort:      0,
-		ToName:        string(sipMsg.To.Name),
+		//FromHost:      string(sipMsg.From.Host),
+		//FromPort:      0,
+		//ToName:        string(sipMsg.To.Name),
 		ToUser:        string(sipMsg.To.User),
-		ToHost:        string(sipMsg.To.Host),
-		ToPort:        0,
-		ContactName:   string(sipMsg.Contact.Name),
-		ContactUser:   string(sipMsg.Contact.User),
-		ContactHost:   string(sipMsg.Contact.Host),
-		ContactPort:   0,
+		//ToHost:        string(sipMsg.To.Host),
+		//ToPort:        0,
+		//ContactName:   string(sipMsg.Contact.Name),
+		//ContactUser:   string(sipMsg.Contact.User),
+		//ContactHost:   string(sipMsg.Contact.Host),
+		//ContactPort:   0,
 		UserAgent:     string(sipMsg.Ua.Value),
 	}
 
@@ -135,18 +135,18 @@ func (rtd RawTextData) parseSipPacket() (AnalyticSipPacket, error) {
 	if pkt.ReqStatusCode, err = atoi(string(sipMsg.Req.StatusCode), 0); err != nil {
 		return pkt, ErrInvalidSipPacket
 	}
-	if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
-		return pkt, ErrInvalidSipPacket
-	}
-	if pkt.FromPort, err = atoi(string(sipMsg.From.Port), 5060); err != nil {
-		return pkt, ErrInvalidSipPacket
-	}
-	if pkt.ToPort, err = atoi(string(sipMsg.To.Port), 5060); err != nil {
-		return pkt, ErrInvalidSipPacket
-	}
-	if pkt.ContactPort, err = atoi(string(sipMsg.Contact.Port), 5060); err != nil {
-		return pkt, ErrInvalidSipPacket
-	}
+	//if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
+	//	return pkt, ErrInvalidSipPacket
+	//}
+	//if pkt.FromPort, err = atoi(string(sipMsg.From.Port), 5060); err != nil {
+	//	return pkt, ErrInvalidSipPacket
+	//}
+	//if pkt.ToPort, err = atoi(string(sipMsg.To.Port), 5060); err != nil {
+	//	return pkt, ErrInvalidSipPacket
+	//}
+	//if pkt.ContactPort, err = atoi(string(sipMsg.Contact.Port), 5060); err != nil {
+	//	return pkt, ErrInvalidSipPacket
+	//}
 
 	return pkt, nil
 }

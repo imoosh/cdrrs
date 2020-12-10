@@ -1,4 +1,4 @@
-package conmap
+package cache
 
 import (
 	"fmt"
@@ -17,8 +17,8 @@ func BenchmarkNewConCurrentMap(b *testing.B) {
 			wg.Add(1)
 			go func() {
 				for i := 0; i < 100000; i++ {
-					hm.Set(strconv.Itoa(i), i*i)
-					hm.Set(strconv.Itoa(i), i*i)
+					hm.SetEx(strconv.Itoa(i), i*i)
+					hm.SetEx(strconv.Itoa(i), i*i)
 					hm.Del(strconv.Itoa(i))
 				}
 				wg.Done()
@@ -56,8 +56,8 @@ func TestExpireMap_SetWithExpire(t *testing.T) {
 			succ, fail := 0, 0
 			for i := 0; i < 100000; i++ {
 				k, v := fmt.Sprintf("%03d%06d", x, i), i*i
-				hm.SetWithExpire(k, v, time.Second*3)
-				//hm.Set(k, v)
+				hm.SetWithExpire(k, v)
+				//hm.SetEx(k, v)
 				_, ok := hm.Get(k)
 				if ok {
 					succ++
@@ -80,7 +80,7 @@ func TestExpireMap_SetWithExpire(t *testing.T) {
 			for i := 0; i < 100000; i++ {
 				k, _ := fmt.Sprintf("%03d%06d", x, i), i*i
 				//hm.SetWithExpire(k,v, time.Second*20)
-				//hm.Set(k, v)
+				//hm.SetEx(k, v)
 				_, ok := hm.Get(k)
 				if ok {
 					succ++
@@ -104,7 +104,7 @@ func BenchmarkExpireMap_SetWithExpire(b *testing.B) {
 			wg.Add(1)
 			go func() {
 				for i := 0; i < 100000; i++ {
-					hm.SetWithExpire(strconv.Itoa(i), i*i, time.Second*3)
+					hm.SetWithExpire(strconv.Itoa(i), i*i)
 					hm.Del(strconv.Itoa(i))
 				}
 				wg.Done()

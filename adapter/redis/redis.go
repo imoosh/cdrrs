@@ -33,7 +33,8 @@ func (rp *Pipeline) asyncStore(k, v string) {
 	c := command{name: "SET", args: []interface{}{k, v}, todo: make(chan interface{}, 2)}
 	c.todo <- emptyDelayHandleUnit
 	rp.cmdSocket.send <- c
-	rp.todoQueue <- c.todo
+	// 不用处理结果
+	//rp.todoQueue <- c.todo
 }
 
 func (rp *Pipeline) asyncStoreWithExpire(k, v string, expire int) {
@@ -41,7 +42,8 @@ func (rp *Pipeline) asyncStoreWithExpire(k, v string, expire int) {
 	c := command{name: "SETEX", args: []interface{}{k, expire, v}, todo: make(chan interface{}, 2)}
 	c.todo <- emptyDelayHandleUnit
 	rp.cmdSocket.send <- c
-	rp.todoQueue <- c.todo
+	// 不用处理结果
+	//rp.todoQueue <- c.todo
 }
 
 func (rp *Pipeline) asyncLoad(k string, u DelayHandleUnit) {
@@ -66,6 +68,7 @@ func (rp *Pipeline) asyncDelete(k string) {
 	c := command{name: "DEL", args: []interface{}{k}, todo: make(chan interface{}, 2)}
 	c.todo <- emptyDelayHandleUnit
 	rp.cmdSocket.send <- c
+	// 不用处理结果
 	//rp.todoQueue <- c.todo
 }
 
@@ -88,7 +91,7 @@ func AsyncDelete(k string) {
 func Init(c *Config, fun func(unit DelayHandleUnit, result CmdResult)) error {
 
 	redisPipeline = Pipeline{
-		todoQueue: make(chan (<-chan interface{}), 10000),
+		todoQueue: make(chan (<-chan interface{}), 1<<20),
 		cmdSocket: newRunner(newPool(c).Get()),
 	}
 
