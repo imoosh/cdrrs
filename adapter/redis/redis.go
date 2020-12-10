@@ -60,7 +60,9 @@ func (rp *Pipeline) asyncLoad(k string, u DelayHandleUnit) {
 func (rp *Pipeline) asyncCollectResult(doResultFunc func(unit DelayHandleUnit, result CmdResult)) {
 	for r := range rp.todoQueue {
 		// 异步处理redis查询结果 model.HandleRedisResult
-		doResultFunc((<-r).(DelayHandleUnit), (<-r).(CmdResult))
+		dhu := <-r
+		res := <-r
+		doResultFunc(dhu.(DelayHandleUnit), res.(CmdResult))
 	}
 }
 

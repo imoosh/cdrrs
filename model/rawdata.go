@@ -99,18 +99,18 @@ func (rtd RawTextData) parseSipPacket() (AnalyticSipPacket, error) {
 		//ReqHost:       string(sipMsg.Req.Host),
 		//ReqPort:       0,
 		//FromName:      string(sipMsg.From.Name),
-		FromUser:      string(sipMsg.From.User),
+		FromUser: string(sipMsg.From.User),
 		//FromHost:      string(sipMsg.From.Host),
 		//FromPort:      0,
 		//ToName:        string(sipMsg.To.Name),
-		ToUser:        string(sipMsg.To.User),
+		ToUser: string(sipMsg.To.User),
 		//ToHost:        string(sipMsg.To.Host),
 		//ToPort:        0,
 		//ContactName:   string(sipMsg.Contact.Name),
 		//ContactUser:   string(sipMsg.Contact.User),
 		//ContactHost:   string(sipMsg.Contact.Host),
 		//ContactPort:   0,
-		UserAgent:     string(sipMsg.Ua.Value),
+		UserAgent: string(sipMsg.Ua.Value),
 	}
 
 	// 没有call-id、cseq.method、直接丢弃

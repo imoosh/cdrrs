@@ -37,18 +37,18 @@ type AnalyticSipPacket struct {
 	//ReqHost       string `json:"reqHost"`
 	//ReqPort       int    `json:"reqPort"`
 	//FromName      string `json:"fromName"`
-	FromUser      string `json:"fromUser"`
+	FromUser string `json:"fromUser"`
 	//FromHost      string `json:"fromHost"`
 	//FromPort      int    `json:"fromPort"`
 	//ToName        string `json:"toName"`
-	ToUser        string `json:"toUser"`
+	ToUser string `json:"toUser"`
 	//ToHost        string `json:"toHost"`
 	//ToPort        int    `json:"toPort"`
 	//ContactName   string `json:"contactName"`
 	//ContactUser   string `json:"contactUser"`
 	//ContactHost   string `json:"contactHost"`
 	//ContactPort   int    `json:"contactPort"`
-	UserAgent     string `json:"userAgent"`
+	UserAgent string `json:"userAgent"`
 
 	CalleeInfo CalleeInfo `json:"calleeInfo"`
 	GetAgain   bool       `json:"getAgain"`
@@ -99,6 +99,7 @@ func doInvite200OKMessage(pkt AnalyticSipPacket, key, value string) {
 				Func: cdrRestore,
 				Args: pkt,
 			})
+			//redis.AsyncDelete(key)
 		}
 	}
 }
@@ -113,6 +114,7 @@ func doBye200OKMessage(pkt AnalyticSipPacket, key, value string) {
 				Func: cdrRestore,
 				Args: pkt,
 			})
+			//redis.AsyncDelete(key)
 		}
 	}
 }

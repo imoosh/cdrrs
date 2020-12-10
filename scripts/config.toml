@@ -12,7 +12,7 @@
 [fileParser]
     rootPath = "/"
     startDatePath = "202012/20201201"
-    maxParseProcs = 200
+    maxParseProcs = 32
 
 [kafka]
     # 诈骗模型服务
@@ -29,7 +29,7 @@
     Filter = "udp"
 
 [mysql]
-    dsn = "root:123456@tcp(192.168.1.205:3306)/centnet_cdrrs?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
+    dsn = "centnet_cdrrs:123456@tcp(192.168.1.205:3306)/centnet_cdrrs?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
     # 话单缓存刷新间隔，单位：秒
     flushPeriod = 10
     # 话单批量插入条数
