@@ -135,13 +135,13 @@ func parseCalleeInfo(num string) (CalleeInfo, error) {
 	}
 
 	var (
-		callee = num
-		err    error
-		pos    dao.PhonePosition
+		calleeNum = num
+		err       error
+		pos       dao.PhonePosition
 	)
 
 	if length >= 11 {
-		callee = callee[length-11:]
+		callee := calleeNum[length-11:]
 		if strings.HasPrefix(callee, "1") {
 			// 手机号码归属查询
 			if pos, err = dao.GetPositionByMobilePhoneNumber(callee); err == nil {
@@ -156,7 +156,7 @@ func parseCalleeInfo(num string) (CalleeInfo, error) {
 	}
 
 	if length >= 12 {
-		callee = callee[length-12:]
+		callee := calleeNum[length-12:]
 		if strings.HasPrefix(callee, "0") {
 			// 座机号码归属查询
 			if pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
@@ -172,7 +172,7 @@ func parseCalleeInfo(num string) (CalleeInfo, error) {
 	}
 
 	if length >= 13 {
-		callee = callee[length-13:]
+		callee := calleeNum[length-13:]
 		if strings.HasPrefix(callee, "86") {
 			// 86xxx xxxx xxxx -> 80xxx xxxx xxxx -> 0xxx xxxx xxxx
 			callee = strings.Replace(callee, "86", "80", 1)[1:]
@@ -182,13 +182,14 @@ func parseCalleeInfo(num string) (CalleeInfo, error) {
 		}
 	}
 
-	callee = num[length-11:]
-	if strings.HasPrefix(callee, "852") {
-		return CalleeInfo{Number: callee, Pos: dao.PhonePosition{Province: "香港", City: "香港"}}, nil
-	} else if strings.HasPrefix(callee, "853") {
-		return CalleeInfo{Number: callee, Pos: dao.PhonePosition{Province: "澳门", City: "澳门"}}, nil
+	{
+		callee := calleeNum[length-11:]
+		if strings.HasPrefix(callee, "852") {
+			return CalleeInfo{Number: callee, Pos: dao.PhonePosition{Province: "香港", City: "香港"}}, nil
+		} else if strings.HasPrefix(callee, "853") {
+			return CalleeInfo{Number: callee, Pos: dao.PhonePosition{Province: "澳门", City: "澳门"}}, nil
+		}
 	}
-
 	return CalleeInfo{Number: num, Pos: pos}, errUnresolvableNumber
 }
 

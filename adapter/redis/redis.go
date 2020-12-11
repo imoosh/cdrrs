@@ -74,6 +74,14 @@ func (rp *Pipeline) asyncDelete(k string) {
 	//rp.todoQueue <- c.todo
 }
 
+func (rp *Pipeline) asyncFlushAll() {
+	c := command{name: "FLUSHALL", args: []interface{}{}, todo: make(chan interface{}, 2)}
+	c.todo <- emptyDelayHandleUnit
+	rp.cmdSocket.send <- c
+	// 不用处理结果
+	//rp.todoQueue <- c.todo
+}
+
 func AsyncStore(k, v string) {
 	redisPipeline.asyncStore(k, v)
 }
@@ -90,6 +98,10 @@ func AsyncDelete(k string) {
 	redisPipeline.asyncDelete(k)
 }
 
+func AsyncFlushAll() {
+	redisPipeline.asyncFlushAll()
+}
+
 func Init(c *Config, fun func(unit DelayHandleUnit, result CmdResult)) error {
 
 	redisPipeline = Pipeline{
@@ -98,6 +110,9 @@ func Init(c *Config, fun func(unit DelayHandleUnit, result CmdResult)) error {
 	}
 
 	go redisPipeline.asyncCollectResult(fun)
+
+	AsyncFlushAll()
+	time.Sleep(time.Second * 3)
 
 	return nil
 }

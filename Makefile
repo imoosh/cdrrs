@@ -51,10 +51,10 @@ install:
 	install -d $(OUTPUT_PATH)/bin
 	install -d $(OUTPUT_PATH)/conf
 	install -d $(OUTPUT_PATH)/scripts
-	install -m 0755 $(SCRIPTS_PATH)/cdrrs.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/cdrrs-server-start.sh $(OUTPUT_PATH)/
+	install -m 0755 $(SCRIPTS_PATH)/cdrrs-server-stop.sh $(OUTPUT_PATH)/
 	install $(SCRIPTS_PATH)/*.sql $(OUTPUT_PATH)/scripts/
 	install $(SCRIPTS_PATH)/config.toml $(OUTPUT_PATH)/conf/
-	install -m 0755 $(SCRIPTS_PATH)/tcpreplay.sh $(OUTPUT_PATH)/scripts/
 	install -m 0755 $(SCRIPTS_PATH)/import_sql.sh $(OUTPUT_PATH)/scripts/
 	install -m 0755 $(SCRIPTS_PATH)/deployment.sh $(OUTPUT_PATH)/scripts/
 
