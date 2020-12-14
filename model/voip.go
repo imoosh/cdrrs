@@ -90,6 +90,7 @@ func deleteByeCallIdCache(id string) {
 }
 
 func doInvite200OKMessage(pkt AnalyticSipPacket, key, value string) {
+	// 尝试本地缓存，如果缓存失败，则删除缓存并返回已缓存的数据，即BYE-200OK CallId
 	if v, ok := putInviteCallIdInCache(key); ok {
 		// invite插入redis
 		redis.AsyncStoreWithExpire(key, value, time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
@@ -105,6 +106,7 @@ func doInvite200OKMessage(pkt AnalyticSipPacket, key, value string) {
 }
 
 func doBye200OKMessage(pkt AnalyticSipPacket, key, value string) {
+	// 尝试本地缓存，如果缓存失败，则删除缓存并返回已缓存的数据，即INVITE-200OK CallId
 	if v, ok := putByeCallIdInCache(key); ok {
 		// invite插入redis
 		redis.AsyncStoreWithExpire(key, value, time.Second*time.Duration(conf.Conf.Redis.CacheExpire))

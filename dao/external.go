@@ -25,24 +25,25 @@ func CachePhoneNumberAttribution() error {
 	pp := new(PhonePosition)
 	var pps []PhonePosition
 
-	// 查询并缓存手机号码归属地列表
-	n, err := o.QueryTable(pp).Filter("phone__isnull", false).GroupBy("phone").All(&pps, "Phone", "Province", "City")
-	if err != nil {
-		return err
-	}
-	log.Debugf("Query [%d] results through the 'phone' field in phone_position table", n)
-	for _, val := range pps {
-		mobilePhoneNumberAttributionMap[val.Phone] = val
-	}
-
+	log.Debug("")
 	// 查询并缓存座机号码归属地列表
-	n, err = o.QueryTable(pp).Filter("code1__isnull", false).GroupBy("code1").All(&pps, "Code1", "Province", "City")
+	n, err := o.QueryTable(pp).Filter("code1__isnull", false).GroupBy("code1").All(&pps, "Code1", "Province", "City")
 	if err != nil {
 		return err
 	}
-	log.Debugf("Query [%d] results through the 'code1' field in phone_position table", n)
+	log.Debugf("fixedPhoneNumberAttributionMap cached %d items (%d queried)", len(fixedPhoneNumberAttributionMap), n)
 	for _, val := range pps {
 		fixedPhoneNumberAttributionMap[val.Code1] = val
+	}
+
+	// 查询并缓存手机号码归属地列表
+	n, err = o.QueryTable(pp).Filter("phone__isnull", false).All(&pps, "Phone", "Province", "City")
+	if err != nil {
+		return err
+	}
+	log.Debugf("mobilePhoneNumberAttributionMap cached %d items (%d queried)", len(mobilePhoneNumberAttributionMap), n)
+	for _, val := range pps {
+		mobilePhoneNumberAttributionMap[val.Phone] = val
 	}
 
 	return nil

@@ -122,7 +122,6 @@ func (rtd RawTextData) parseSipPacket() (AnalyticSipPacket, error) {
 	var err error
 	pkt.CalleeInfo, err = parseCalleeInfo(pkt.ToUser)
 	if err != nil {
-		//log.Debug("DIRTY-DATA:", string(value.([]byte)))
 		return pkt, ErrInvalidSipPacket
 	}
 
