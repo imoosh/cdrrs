@@ -62,6 +62,7 @@ func (rp *Pipeline) asyncCollectResult(doResultFunc func(unit DelayHandleUnit, r
 		// 异步处理redis查询结果 model.HandleRedisResult
 		dhu := <-r
 		res := <-r
+
 		doResultFunc(dhu.(DelayHandleUnit), res.(CmdResult))
 	}
 }

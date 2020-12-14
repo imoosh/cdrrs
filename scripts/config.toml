@@ -18,7 +18,7 @@
     # 开始解析哪天目录下的文件
     startDatePath = "202012/20201201"
     # 最大并发解析线程数
-    maxParseProcs = 32
+    maxParseProcs = 36
 
 # 话单数据库配置
 [mysql]

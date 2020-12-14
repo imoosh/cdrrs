@@ -14,8 +14,8 @@ import (
 
 // Consumer Consumer配置
 type ConsumerConfig struct {
-	Topic  string
 	Broker string
+	Topic  string
 	Group  string
 
 	GroupMembers        int
@@ -77,12 +77,12 @@ func (m *ConsumerGroupMember) loop(topics []string) {
 		for {
 			select {
 			case <-m.Timer.C:
-				pktRate := (m.TotalCount - m.LastCount) / uint64(m.Conf.FlowRateFlushPeriod)
-				bytesRate := float64(m.TotalBytes-m.LastBytes) / float64(m.Conf.FlowRateFlushPeriod) / 1024.0 / 1024.0 * 8
-				if int(bytesRate*1000) < 10 && bytesRate != 0 {
-					bytesRate = 0.01
-				}
-				log.Debugf("[%s] processing speed: %d pps, %.2f Mbps, %d packets", m.ClientID, pktRate, bytesRate, m.TotalCount)
+				//pktRate := (m.TotalCount - m.LastCount) / uint64(m.Conf.FlowRateFlushPeriod)
+				//bytesRate := float64(m.TotalBytes-m.LastBytes) / float64(m.Conf.FlowRateFlushPeriod) / 1024.0 / 1024.0 * 8
+				//if int(bytesRate*1000) < 10 && bytesRate != 0 {
+				//	bytesRate = 0.01
+				//}
+				//log.Debugf("gm-%s processing speed: %d pps, %.2f Mbps, %d packets", m.ClientID, pktRate, bytesRate, m.TotalCount)
 
 				m.LastCount = m.TotalCount
 				m.LastBytes = m.TotalBytes

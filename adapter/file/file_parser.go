@@ -182,7 +182,7 @@ func (rfp *RawFileParser) parseFile(x FileInfoX, bufReader *bufio.Reader) {
 		log.Errorf("os.OpenFile '%s' error: %s", x.filepath, err)
 		return
 	}
-	log.Debugf("[%03d/%d] - file count: %d, '%s' open success", rfp.numWorkers.Load(),
+	log.Debugf("[%d/%d] - file count: %d, '%s' open success", rfp.numWorkers.Load(),
 		rfp.conf.MaxParseProcs, rfp.numFiles.Load(), x.filepath[len(rfp.conf.RootPath)+1:])
 
 	// 使用bufio.Reader读数据
@@ -201,6 +201,6 @@ func (rfp *RawFileParser) parseFile(x FileInfoX, bufReader *bufio.Reader) {
 		rfp.parseLineFunc(string(line))
 	}
 	rfp.numWorkers.Sub(1)
-	log.Debugf("[%03d/%d] - file count: %d, '%s' parsed done", rfp.numWorkers.Load(),
+	log.Debugf("[%d/%d] - file count: %d, '%s' parsed done", rfp.numWorkers.Load(),
 		rfp.conf.MaxParseProcs, rfp.numFiles.Load(), x.filepath[len(rfp.conf.RootPath)+1:])
 }

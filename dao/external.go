@@ -31,20 +31,20 @@ func CachePhoneNumberAttribution() error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("fixedPhoneNumberAttributionMap cached %d items (%d queried)", len(fixedPhoneNumberAttributionMap), n)
 	for _, val := range pps {
 		fixedPhoneNumberAttributionMap[val.Code1] = val
 	}
+	log.Debugf("fixedPhoneNumberAttributionMap cached %d items (%d queried)", len(fixedPhoneNumberAttributionMap), n)
 
 	// 查询并缓存手机号码归属地列表
 	n, err = o.QueryTable(pp).Filter("phone__isnull", false).All(&pps, "Phone", "Province", "City")
 	if err != nil {
 		return err
 	}
-	log.Debugf("mobilePhoneNumberAttributionMap cached %d items (%d queried)", len(mobilePhoneNumberAttributionMap), n)
 	for _, val := range pps {
 		mobilePhoneNumberAttributionMap[val.Phone] = val
 	}
+	log.Debugf("mobilePhoneNumberAttributionMap cached %d items (%d queried)", len(mobilePhoneNumberAttributionMap), n)
 
 	return nil
 }

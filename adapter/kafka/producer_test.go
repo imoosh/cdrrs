@@ -8,6 +8,13 @@ import (
 	"testing"
 )
 
+var pc = ProducerConfig{
+	Topic:      "SipPacket",
+	Broker:     "192.168.1.205:9092",
+	Frequency:  500,
+	MaxMessage: 1 << 20,
+}
+
 func TestProducer_Run(t *testing.T) {
 	producer, err := NewProducer(&pc)
 	if err != nil {

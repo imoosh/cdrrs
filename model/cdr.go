@@ -8,10 +8,20 @@ import (
 	"centnet-cdrrs/library/log"
 	"encoding/json"
 	uuid "github.com/satori/go.uuid"
+	"sync"
 	"time"
 )
 
 var fraudAnalysisModel *kafka.Producer
+var cdrPool sync.Pool
+
+func NewCDR() *dao.VoipRestoredCdr {
+	return cdrPool.Get().(*dao.VoipRestoredCdr)
+}
+
+func FreeCDR(cdr *dao.VoipRestoredCdr) {
+	cdrPool.Put(cdr)
+}
 
 func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 	if result.Err != nil {
@@ -22,9 +32,14 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 		return
 	}
 
+	// 统一回收AnalyticSipPacket
+	if unit.Args != nil {
+		defer unit.Args.(*AnalyticSipPacket).Free()
+	}
+
 	switch result.Value.(type) {
 	case nil:
-		pkt := unit.Args.(AnalyticSipPacket)
+		pkt := unit.Args.(*AnalyticSipPacket)
 		if pkt.CseqMethod == "INVITE" {
 			log.Error("cannot find BYE-200OK: ", pkt.CallId)
 		} else if pkt.CseqMethod == "BYE" {
@@ -44,18 +59,20 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 		if pkt.GetAgain {
 			return
 		}
-		go func(asp AnalyticSipPacket) {
+		go func(asp *AnalyticSipPacket) {
 			time.Sleep(time.Second * 3)
 			asp.GetAgain = true
 			redis.AsyncLoad(asp.CallId, redis.DelayHandleUnit{
 				Func: cdrRestore,
 				Args: asp,
 			})
-		}(pkt)
+		}(NewSip().Init(pkt))
 
 	case []byte:
-		var pkt AnalyticSipPacket
-		err := json.Unmarshal(result.Value.([]byte), &pkt)
+		pkt := NewSip()
+		defer pkt.Free()
+
+		err := json.Unmarshal(result.Value.([]byte), pkt)
 		if err != nil {
 			log.Error(err)
 		}
@@ -64,18 +81,18 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 		redis.AsyncDelete(pkt.CallId)
 
 		// 合成话单
-		if pkt.CseqMethod == "INVITE" && unit.Args.(AnalyticSipPacket).CseqMethod == "BYE" {
+		if pkt.CseqMethod == "INVITE" && unit.Args.(*AnalyticSipPacket).CseqMethod == "BYE" {
 			// 实际调用cdrRestore
 			//unit.Func(pkt, unit.Args)
 			cdrRestore(pkt, unit.Args)
-		} else if pkt.CseqMethod == "BYE" && unit.Args.(AnalyticSipPacket).CseqMethod == "INVITE" {
+		} else if pkt.CseqMethod == "BYE" && unit.Args.(*AnalyticSipPacket).CseqMethod == "INVITE" {
 			// 实际调用cdrRestore
 			//unit.Func(unit.Args, pkt)
 			cdrRestore(unit.Args, pkt)
 		} else {
 			log.Error("error message type: ", string(result.Value.([]byte)))
-			sipmsg := unit.Args.(AnalyticSipPacket)
-			sipstr, _ := json.Marshal(&sipmsg)
+			sipmsg := unit.Args.(*AnalyticSipPacket)
+			sipstr, _ := json.Marshal(sipmsg)
 			log.Error("error message pair: ", string(sipstr))
 		}
 	case string:
@@ -85,7 +102,7 @@ func DoRedisResult(unit redis.DelayHandleUnit, result redis.CmdResult) {
 }
 
 func cdrRestore(i, b interface{}) interface{} {
-	invite, bye := i.(AnalyticSipPacket), b.(AnalyticSipPacket)
+	invite, bye := i.(*AnalyticSipPacket), b.(*AnalyticSipPacket)
 
 	var err error
 	connectTime, err := time.ParseInLocation("20060102150405", invite.EventTime, time.Local)
@@ -148,22 +165,6 @@ func cdrRestore(i, b interface{}) interface{} {
 
 	//插入话单数据库
 	dao.LogCDR(&cdr)
-
-	return nil
-}
-
-func Init() error {
-	/* 还原的话单数据交给诈骗分析模型 */
-	producerConfig := conf.Conf.Kafka.FraudModelProducer
-	if producerConfig.Enable {
-		var err error
-		fraudAnalysisModel, err = kafka.NewProducer(producerConfig)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		fraudAnalysisModel.Run()
-	}
 
 	return nil
 }

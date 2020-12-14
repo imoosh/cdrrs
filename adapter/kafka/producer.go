@@ -9,13 +9,6 @@ import (
 	"time"
 )
 
-var pc = ProducerConfig{
-	Topic:      "SipPacket",
-	Broker:     "192.168.1.205:9092",
-	Frequency:  500,
-	MaxMessage: 1 << 20,
-}
-
 // Conf 配置
 type ProducerConfig struct {
 	Enable     bool   `xml:"enable"`

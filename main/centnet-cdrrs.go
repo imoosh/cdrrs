@@ -95,6 +95,6 @@ func main() {
 func printMemStats() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	log.Debugf("Alloc = %vMB TotalAlloc = %vMB Sys = %vMB NumGC = %v",
-		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+	log.Debugf("Alloc = %vMB Sys = %vMB NumGC = %v",
+		m.Alloc/1024/1024, m.Sys/1024/1024, m.NumGC)
 }
