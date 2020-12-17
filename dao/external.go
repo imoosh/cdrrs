@@ -90,13 +90,7 @@ func GetPositionByMobilePhoneNumber(num string) (PhonePosition, error) {
 }
 
 func CreateTable(tableName string) {
-	sql := "DROP TABLE IF EXISTS `" + tableName + "`;"
-	_, err := orm.NewOrm().Raw(sql).Exec()
-	if err != nil {
-		log.Error(err)
-	}
-
-	sql = "CREATE TABLE IF NOT EXISTS `" + tableName + "`" + " (" +
+	sql := "CREATE TABLE IF NOT EXISTS `" + tableName + "`" + " (" +
 		"`id` bigint(20) NOT NULL COMMENT '话单唯一ID'," +
 		"`caller_ip` varchar(64) DEFAULT NULL COMMENT '主叫IP', " +
 		"`caller_port` int(8) DEFAULT NULL COMMENT '主叫端口'," +
@@ -116,7 +110,7 @@ func CreateTable(tableName string) {
 		"PRIMARY KEY (`id`)" +
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"
 
-	_, err = orm.NewOrm().Raw(sql).Exec()
+	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
 		log.Error(err)
 	}

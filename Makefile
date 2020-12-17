@@ -50,7 +50,9 @@ fmt:
 install:
 	install -d $(OUTPUT_PATH)/bin
 	install -d $(OUTPUT_PATH)/conf
+	install -d $(OUTPUT_PATH)/docs
 	install -d $(OUTPUT_PATH)/scripts
+	install docs/* $(OUTPUT_PATH)/docs
 	install -m 0755 $(SCRIPTS_PATH)/cdrrs-server-start.sh $(OUTPUT_PATH)/
 	install -m 0755 $(SCRIPTS_PATH)/cdrrs-server-stop.sh $(OUTPUT_PATH)/
 	install $(SCRIPTS_PATH)/*.sql $(OUTPUT_PATH)/scripts/
