@@ -36,7 +36,7 @@ type RawFileParser struct {
 	CurrentDaysPath   string
 	Files             chan FileInfoX
 	newestWrittenTime time.Time // 遍历的数据文件中最新写完时间
-	parseLineFunc     func(string)
+	parseLineFunc     func(interface{})
 	numWorkers        *atomic.Int32
 	numFiles          *atomic.Int32
 }
@@ -140,7 +140,7 @@ func getNextDaysReadPath(t time.Time) string {
 	return t.Add(time.Hour * 24).Format("200601/20060102")
 }
 
-func (rfp *RawFileParser) Run(fun func(string)) {
+func (rfp *RawFileParser) Run(fun func(interface{})) {
 
 	rfp.parseLineFunc = fun
 	go func() {
@@ -173,8 +173,9 @@ func (rfp *RawFileParser) parseLoop() {
 }
 
 func (rfp *RawFileParser) parseFile(x FileInfoX, bufReader *bufio.Reader) {
-	rfp.numFiles.Add(1)
+
 	rfp.numWorkers.Add(1)
+
 	// 处理文件流程
 	fr, err := os.OpenFile(x.filepath, os.O_RDONLY, 0)
 	defer fr.Close()
@@ -182,11 +183,11 @@ func (rfp *RawFileParser) parseFile(x FileInfoX, bufReader *bufio.Reader) {
 		log.Errorf("os.OpenFile '%s' error: %s", x.filepath, err)
 		return
 	}
-	log.Debugf("[%d/%d] - file count: %d, '%s' open success", rfp.numWorkers.Load(),
-		rfp.conf.MaxParseProcs, rfp.numFiles.Load(), x.filepath[len(rfp.conf.RootPath)+1:])
 
-	// 使用bufio.Reader读数据
-	//bufReader := bufio.NewReaderSize(fr, 10<<20)
+	t := time.Now()
+	log.Debugf("[%2d/%d] - '%s' opened", rfp.numWorkers.Load(), rfp.conf.MaxParseProcs,
+		x.filepath[len(rfp.conf.RootPath)+1:])
+
 	bufReader.Reset(fr)
 	for {
 		line, _, err := bufReader.ReadLine()
@@ -198,9 +199,9 @@ func (rfp *RawFileParser) parseFile(x FileInfoX, bufReader *bufio.Reader) {
 		}
 
 		// 调用model.DoLine
-		rfp.parseLineFunc(string(line))
+		rfp.parseLineFunc(line)
 	}
 	rfp.numWorkers.Sub(1)
-	log.Debugf("[%d/%d] - file count: %d, '%s' parsed done", rfp.numWorkers.Load(),
-		rfp.conf.MaxParseProcs, rfp.numFiles.Load(), x.filepath[len(rfp.conf.RootPath)+1:])
+	log.Debugf("[%d/%d] - '%s' parsed done. %.1fs used, file count: %d", rfp.numWorkers.Load(),
+		rfp.conf.MaxParseProcs, x.filepath[len(rfp.conf.RootPath)+1:], time.Since(t).Seconds(), rfp.numFiles.Add(1))
 }

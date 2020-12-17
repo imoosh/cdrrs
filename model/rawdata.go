@@ -1,31 +1,37 @@
 package model
 
 import (
+	"bytes"
 	"centnet-cdrrs/library/log"
 	"github.com/pkg/errors"
-	"strings"
 	"sync"
 )
 
 const SEPARATOR = "\r\n"
 
 var (
-	rtdPool                 = sync.Pool{New: func() interface{} { return &RawTextData{} }}
-	errInvalidRawTextData   = errors.New("split error")
-	errInvalidSipPacketType = errors.New("not invite/bye 200 ok message")
-	errInvalidSipPacket     = errors.New("not invite/bye 200 ok message")
+	delimiter             = []byte("\",\"")
+	oldLineBreak          = []byte("\\0D\\0A")
+	newLineBreak          = []byte("\r\n")
+	oldDoubleQuotes       = []byte("\"\"")
+	newDoubleQuotes       = []byte("\"")
+	sipStatus200OKPrefix  = []byte("SIP/2.0 200 OK")
+	emptyRtd              = RawTextData{}
+	rtdPool               = sync.Pool{New: func() interface{} { return &RawTextData{} }}
+	errInvalidRawTextData = errors.New("split error")
+	errInvalidSipPacket   = errors.New("not invite/bye 200 ok message")
 )
 
 // 数据格式: "event_time", "event_id", saddr_v4", "daddr_v4", "dport", "param_content"，每条数据以"\r\n"分割
 
 type RawTextData struct {
-	EventTime    string
-	EventId      string
-	SaddrV4      string
-	Sport        string
-	DaddrV4      string
-	Dport        string
-	ParamContent string
+	EventTime []byte
+	//EventId      []byte
+	SaddrV4      []byte
+	Sport        []byte
+	DaddrV4      []byte
+	Dport        []byte
+	ParamContent []byte
 }
 
 func NewRtd() *RawTextData {
@@ -33,19 +39,19 @@ func NewRtd() *RawTextData {
 }
 
 func (rtd *RawTextData) Free() {
+	*rtd = emptyRtd
 	rtdPool.Put(rtd)
 }
 
 // 根据安全中心提供的数据样例，替换特殊字符
-func pretreatment(s string) string {
-	s = strings.ReplaceAll(s, "\\0D\\0A", "\r\n")
-	return strings.ReplaceAll(s, "\"\"", "\"")
+func pretreatment(s []byte) []byte {
+	return bytes.ReplaceAll(bytes.ReplaceAll(s, oldLineBreak, newLineBreak), oldDoubleQuotes, newDoubleQuotes)
 }
 
 // 数据格式: "event_time", "event_id", saddr_v4", "daddr_v4", "dport", "param_content"，每个字段间以","间隔
-func split(s string) []string {
+func split(s []byte) [][]byte {
 	// 分割成7端
-	ss := strings.SplitN(s, "\",\"", 7)
+	ss := bytes.SplitN(s, delimiter, 7)
 	if len(ss) != 7 {
 		return nil
 	}
@@ -63,7 +69,7 @@ func split(s string) []string {
 	return ss
 }
 
-func (rtd *RawTextData) parse(s string) error {
+func (rtd *RawTextData) parse(s []byte) error {
 	ss := split(pretreatment(s))
 	if len(ss) == 0 {
 		log.Errorf("split error: %s", s)
@@ -71,12 +77,12 @@ func (rtd *RawTextData) parse(s string) error {
 	}
 
 	// 只关注INVITE 200OK消息 和 BYE 200OK消息
-	if !strings.HasPrefix(ss[6], "SIP/2.0 200 OK") {
-		return errInvalidSipPacketType
+	if !bytes.HasPrefix(ss[6], sipStatus200OKPrefix) {
+		return errInvalidSipPacket
 	}
 
 	rtd.EventTime = ss[0]
-	rtd.EventId = ss[1]
+	//rtd.EventId = ss[1]
 	rtd.SaddrV4 = ss[2]
 	rtd.Sport = ss[3]
 	rtd.DaddrV4 = ss[4]

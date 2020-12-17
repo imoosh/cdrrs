@@ -63,13 +63,15 @@ func (r *runner) receiver() {
 	for ch := range r.recv {
 		var result CmdResult
 		result.Value, result.Err = r.conn.Receive()
+		if result.Err != nil && r.conn.Err() != nil {
+			log.Error(r.conn.Err())
+			continue
+		}
+
 		// 将结果放入通道中
 		ch <- result
 		// 发送完立即关闭
 		close(ch)
-		if result.Err != nil && r.conn.Err() != nil {
-			log.Error(r.conn.Err())
-		}
 	}
 	close(r.done)
 }

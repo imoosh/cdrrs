@@ -14,7 +14,7 @@
 # 解析原始数据文件配置
 [fileParser]
 	# 以过滤规则ID命名的绝对路径
-    rootPath = "/"									#
+    rootPath = "/home"									#
     # 开始解析哪天目录下的文件
     startDatePath = "202012/20201201"
     # 最大并发解析线程数
@@ -23,13 +23,13 @@
 # 话单数据库配置
 [mysql]
 	# 连接地址，格式为user:password@tcp(host:port)/db_name?paramters...
-    dsn = "centnet_cdrrs:123456@tcp(192.168.1.205:3306)/centnet_cdrrs?timeout=5s&readTimeout=5s&writeTimeout=5s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
+    dsn = "centnet_cdrrs:123456@tcp(192.168.1.205:3306)/centnet_cdrrs?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8,utf8mb4"
     # 话单缓存刷新间隔，单位：秒
     flushPeriod = 10
     # 话单批量插入条数
-    maxFlushCapacity = 5000
+    maxFlushCapacity = 10000
     # 话单缓存最大数量
-    maxCacheCapacity = 20000
+    maxCacheCapacity = 50000
 
 # 缓存服务配置
 [redis]
@@ -46,7 +46,7 @@
 [kafka]
     # 诈骗模型服务
     [kafka.fraudModelProducer]
-    	# 默认关闭不推送，诈骗模型部署后可打开
+    	# 默认关闭，不推送数据，诈骗模型部署后可打开
         enable = false
         topic = "CDR"
         broker = "192.168.1.225:9092"

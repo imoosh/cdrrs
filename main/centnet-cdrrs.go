@@ -80,12 +80,8 @@ func main() {
 	/* 开启文件解析 */
 	file.NewRawFileParser(conf.Conf.FileParser).Run(model.DoLine)
 
-	go func() {
-		for {
-			time.Sleep(time.Second * 5)
-			printMemStats()
-		}
-	}()
+	printMemStats()
+
 	// os signal
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
@@ -94,7 +90,12 @@ func main() {
 
 func printMemStats() {
 	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	log.Debugf("Alloc = %vMB Sys = %vMB NumGC = %v",
-		m.Alloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+	go func() {
+		for {
+			time.Sleep(time.Second * 5)
+			runtime.ReadMemStats(&m)
+			log.Debugf("Alloc = %vMB Sys = %vMB NumGC = %v",
+				m.Alloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+		}
+	}()
 }

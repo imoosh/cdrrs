@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bytes"
 	cmap "centnet-cdrrs/adapter/cache"
 	"centnet-cdrrs/adapter/redis"
 	"centnet-cdrrs/conf"
@@ -20,6 +21,7 @@ const (
 )
 
 var (
+	emptySip              = AnalyticSipPacket{}
 	sipPool               = sync.Pool{New: func() interface{} { return &AnalyticSipPacket{} }}
 	CallIdCache           = cmap.NewExpireMap()
 	errUnresolvableNumber = errors.New("unresolvable number")
@@ -28,35 +30,35 @@ var (
 
 type AnalyticSipPacket struct {
 	//Id            uint64 `json:"id"`
-	EventId       string `json:"eventId"`
-	EventTime     string `json:"eventTime"`
-	Sip           string `json:"sip"`
-	Sport         int    `json:"sport"`
-	Dip           string `json:"dip"`
-	Dport         int    `json:"dport"`
-	CallId        string `json:"callId"`
-	CseqMethod    string `json:"cseqMethod"`
-	ReqStatusCode int    `json:"reqStatusCode"`
+	//EventId       string `json:"eventId"`
+	EventTime     string `json:"t"`
+	Sip           string `json:"si"`
+	Sport         int    `json:"sp"`
+	Dip           string `json:"di"`
+	Dport         int    `json:"dp"`
+	CallId        string `json:"-"`
+	CseqMethod    string `json:"cm"`
+	ReqStatusCode int    `json:"-"`
 	//ReqMethod     string `json:"reqMethod"`
 	//ReqUser       string `json:"reqUser"`
 	//ReqHost       string `json:"reqHost"`
 	//ReqPort       int    `json:"reqPort"`
 	//FromName      string `json:"fromName"`
-	FromUser string `json:"fromUser"`
+	FromUser string `json:"fu"`
 	//FromHost      string `json:"fromHost"`
 	//FromPort      int    `json:"fromPort"`
 	//ToName        string `json:"toName"`
-	ToUser string `json:"toUser"`
+	ToUser string `json:"tu"`
 	//ToHost        string `json:"toHost"`
 	//ToPort        int    `json:"toPort"`
 	//ContactName   string `json:"contactName"`
 	//ContactUser   string `json:"contactUser"`
 	//ContactHost   string `json:"contactHost"`
 	//ContactPort   int    `json:"contactPort"`
-	UserAgent string `json:"userAgent"`
+	UserAgent string `json:"ua"`
 
-	CalleeInfo CalleeInfo `json:"calleeInfo"`
-	GetAgain   bool       `json:"getAgain"`
+	CalleeInfo CalleeInfo `json:"ci"`
+	GetAgain   bool       `json:"nok"`
 }
 
 func cacheInviteCallId(id string) (interface{}, bool) {
@@ -90,11 +92,12 @@ func NewSip() *AnalyticSipPacket {
 }
 
 func (pkt *AnalyticSipPacket) Free() {
+	*pkt = emptySip
 	sipPool.Put(pkt)
 }
 
 func (pkt *AnalyticSipPacket) Init(asp *AnalyticSipPacket) *AnalyticSipPacket {
-	pkt.EventId = asp.EventId
+	//pkt.EventId = asp.EventId
 	pkt.EventTime = asp.EventTime
 	pkt.Sip = asp.Sip
 	pkt.Sport = asp.Sport
@@ -129,7 +132,6 @@ func (pkt *AnalyticSipPacket) doInvite200OKMessage() error {
 				Func: cdrRestore,
 				Args: pkt,
 			})
-			//redis.AsyncDelete(key)
 			return nil
 		}
 	}
@@ -155,7 +157,6 @@ func (pkt *AnalyticSipPacket) doBye200OKMessage() error {
 				Func: cdrRestore,
 				Args: pkt,
 			})
-			//redis.AsyncDelete(key)
 			return nil
 		}
 	}
@@ -173,8 +174,8 @@ func validatePhoneNumber(num string) bool {
 }
 
 type CalleeInfo struct {
-	Number string
-	Pos    dao.PhonePosition
+	Num string            `json:"n"`
+	Pos dao.PhonePosition `json:"p"`
 }
 
 func (info *CalleeInfo) parse(num string) error {
@@ -193,11 +194,13 @@ func (info *CalleeInfo) parse(num string) error {
 		if strings.HasPrefix(callee, "1") {
 			// 手机号码归属查询
 			if info.Pos, err = dao.GetPositionByMobilePhoneNumber(callee); err == nil {
+				info.Num = callee
 				return nil
 			}
 		} else if strings.HasPrefix(callee, "0") {
 			// 座机号码归属查询
 			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, -1); err == nil {
+				info.Num = callee
 				return nil
 			}
 		}
@@ -208,12 +211,14 @@ func (info *CalleeInfo) parse(num string) error {
 		if strings.HasPrefix(callee, "0") {
 			// 座机号码归属查询
 			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
+				info.Num = callee
 				return nil
 			}
 		} else if strings.HasPrefix(callee, "86") {
 			// 86xx xxxx xxxx -> 80xx xxxx xxxx -> 0xx xxxx xxxx
 			callee = strings.Replace(callee, "86", "80", 1)[1:]
 			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, -1); err == nil {
+				info.Num = callee
 				return nil
 			}
 		}
@@ -225,6 +230,7 @@ func (info *CalleeInfo) parse(num string) error {
 			// 86xxx xxxx xxxx -> 80xxx xxxx xxxx -> 0xxx xxxx xxxx
 			callee = strings.Replace(callee, "86", "80", 1)[1:]
 			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
+				info.Num = callee
 				return nil
 			}
 		}
@@ -233,11 +239,11 @@ func (info *CalleeInfo) parse(num string) error {
 	{
 		callee := calleeNum[length-11:]
 		if strings.HasPrefix(callee, "852") {
-			info.Number = callee
+			info.Num = callee
 			info.Pos = dao.PhonePosition{Province: "香港", City: "香港"}
 			return nil
 		} else if strings.HasPrefix(callee, "853") {
-			info.Number = callee
+			info.Num = callee
 			info.Pos = dao.PhonePosition{Province: "澳门", City: "澳门"}
 			return nil
 		}
@@ -253,15 +259,35 @@ func atoi(s string, n int) (int, error) {
 	return strconv.Atoi(s)
 }
 
-func (pkt *AnalyticSipPacket) parseSipPacket(rtd *RawTextData) error {
-	sipMsg := sip.Parse([]byte(rtd.ParamContent))
+func (pkt *AnalyticSipPacket) parse(line interface{}) error {
+	ss := split(pretreatment(line.([]byte)))
+	if len(ss) == 0 {
+		return errInvalidRawTextData
+	}
+
+	// 只关注INVITE 200OK消息 和 BYE 200OK消息
+	if !bytes.HasPrefix(ss[6], sipStatus200OKPrefix) {
+		return errInvalidSipPacket
+	}
+
+	// 数据格式: "event_time", "event_id", saddr_v4", "daddr_v4", "dport", "param_content"，每个字段间以","间隔
+	var rtd RawTextData
+	rtd.EventTime = ss[0]
+	//rtd.EventId = ss[1]
+	rtd.SaddrV4 = ss[2]
+	rtd.Sport = ss[3]
+	rtd.DaddrV4 = ss[4]
+	rtd.Dport = ss[5]
+	rtd.ParamContent = ss[6]
+
+	sipMsg := sip.Parse(ss[6])
 	//sip.PrintSipStruct(&sipMsg)
 
-	pkt.EventId = rtd.EventId
-	pkt.EventTime = rtd.EventTime
-	pkt.Sip = rtd.SaddrV4
+	//pkt.EventId = string(rtd.EventId)
+	pkt.EventTime = string(rtd.EventTime)
+	pkt.Sip = string(rtd.SaddrV4)
 	pkt.Sport = 0
-	pkt.Dip = rtd.DaddrV4
+	pkt.Dip = string(rtd.DaddrV4)
 	pkt.Dport = 0
 	pkt.CallId = string(sipMsg.CallId.Value)
 	pkt.CseqMethod = string(sipMsg.Cseq.Method)
@@ -286,23 +312,28 @@ func (pkt *AnalyticSipPacket) parseSipPacket(rtd *RawTextData) error {
 
 	// 没有call-id、cseq.method、直接丢弃
 	if len(pkt.CallId) == 0 || len(pkt.CseqMethod) == 0 || len(pkt.ToUser) == 0 {
-		return errInvalidSipPacketType
+		sipMsg.Free()
+		return errInvalidSipPacket
 	}
 
 	// 被叫号码字段未解析出手机号码或坐席号码归属地，直接丢弃(同一会话中所有包的FROM字段或TO字段都一样)
 	var err error
 	err = pkt.CalleeInfo.parse(pkt.ToUser)
 	if err != nil {
+		sipMsg.Free()
 		return errInvalidSipPacket
 	}
 
-	if pkt.Sport, err = atoi(rtd.Sport, 0); err != nil {
+	if pkt.Sport, err = atoi(string(rtd.Sport), 0); err != nil {
+		sipMsg.Free()
 		return errInvalidSipPacket
 	}
-	if pkt.Dport, err = atoi(rtd.Dport, 0); err != nil {
+	if pkt.Dport, err = atoi(string(rtd.Dport), 0); err != nil {
+		sipMsg.Free()
 		return errInvalidSipPacket
 	}
 	if pkt.ReqStatusCode, err = atoi(string(sipMsg.Req.StatusCode), 0); err != nil {
+		sipMsg.Free()
 		return errInvalidSipPacket
 	}
 	//if pkt.ReqPort, err = atoi(string(sipMsg.Req.Port), 5060); err != nil {
@@ -318,5 +349,6 @@ func (pkt *AnalyticSipPacket) parseSipPacket(rtd *RawTextData) error {
 	//	return pkt, errInvalidSipPacket
 	//}
 
+	sipMsg.Free()
 	return nil
 }

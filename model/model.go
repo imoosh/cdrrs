@@ -44,41 +44,27 @@ func initWriteCDRKafkaConsumer() {
 		FlowRateFlushPeriod: 3}, "cdr-write-db_01", writeCDRToDB)
 }
 
-func DoLine(line string) {
-	rtd := NewRtd()
-	defer rtd.Free()
-
-	// 解析原始数据包
-	err := rtd.parse(line)
-	if err != nil {
-		return
-	}
-
-	pkt := NewSip()
-	if pkt == nil {
-		log.Error("new sip packet error")
-		return
-	}
-
+func DoLine(line interface{}) {
 	// 解析sip报文
-	err = pkt.parseSipPacket(rtd)
-	if err != nil {
+	pkt := NewSip()
+	if nil != pkt.parse(line) {
 		pkt.Free()
 		return
 	}
 
 	if pkt.CseqMethod == "INVITE" && pkt.ReqStatusCode == 200 {
-		if pkt.doInvite200OKMessage() != nil {
-			pkt.Free()
+		if pkt.doInvite200OKMessage() == nil {
+			return
 		}
 	} else if pkt.CseqMethod == "BYE" && pkt.ReqStatusCode == 200 {
-		if pkt.doBye200OKMessage() != nil {
-			pkt.Free()
+		if pkt.doBye200OKMessage() == nil {
+			return
 		}
 	} else {
 		log.Debug("no handler for else condition")
-		pkt.Free()
 	}
+
+	pkt.Free()
 }
 
 func Init() error {

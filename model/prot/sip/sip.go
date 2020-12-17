@@ -26,6 +26,14 @@ type SipMsg struct {
 	Sdp SdpMsg
 }
 
+func NewSipMsg() *SipMsg {
+	return sipPool.Get().(*SipMsg)
+}
+
+func (sip *SipMsg) Free() {
+	sipPool.Put(sip)
+}
+
 type SdpMsg struct {
 	MediaDesc sdpMediaDesc
 	Attrib    []sdpAttrib
@@ -38,8 +46,8 @@ type sipVal struct {
 }
 
 // Main parsing routine, passes by value
-func Parse(v []byte) (output SipMsg) {
-
+func Parse(v []byte) *SipMsg {
+	output := NewSipMsg()
 	// Allow multiple vias and media Attribs
 	via_idx := 0
 	output.Via = make([]sipVia, 0, 8)
@@ -93,6 +101,7 @@ func Parse(v []byte) (output SipMsg) {
 				} // End of Switch
 			}
 			if spos == 1 && stype == '=' {
+				continue
 				// SDP: Break up into header and value
 				lhdr := strings.ToLower(string(line[0]))
 				lval := bytes.TrimSpace(line[2:])
@@ -115,7 +124,7 @@ func Parse(v []byte) (output SipMsg) {
 		}
 	}
 
-	return
+	return output
 }
 
 // Finds the first valid Seperate or notes its type

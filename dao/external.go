@@ -10,8 +10,12 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-var cdrsCount uint64 = 0
-var errNotFound = errors.New("phone position not found")
+var (
+	cdrsCount   uint64 = 0
+	sqlBuffer          = bytes.NewBuffer(make([]byte, 10<<20))
+	sqlWords           = "(id,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
+	errNotFound        = errors.New("phone position not found")
+)
 
 type UnpackedMessage struct {
 	EventId   string
@@ -85,24 +89,15 @@ func GetPositionByMobilePhoneNumber(num string) (PhonePosition, error) {
 	return PhonePosition{}, errNotFound
 }
 
-func InsertCDR(cdr *VoipRestoredCdr) {
-	sql := fmt.Sprintf(`
-insert into voip_restored_cdr (call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,
-callee_num,caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration)
-        values("%s","%s","%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s",%d,%d,%d)`,
-		cdr.CallId, cdr.Uuid, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
-		cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration)
+func CreateTable(tableName string) {
+	sql := "DROP TABLE IF EXISTS `" + tableName + "`;"
 	_, err := orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
 		log.Error(err)
 	}
-}
 
-func CreateTable(tableName string) {
-	sql := "CREATE TABLE IF NOT EXISTS `" + tableName + "`" + " (" +
-		"`id` bigint(20) NOT NULL AUTO_INCREMENT," +
-		"`uuid` varchar(64) NOT NULL COMMENT '话单唯一ID'," +
-		"`call_id` varchar(128) DEFAULT NULL COMMENT '通话ID'," +
+	sql = "CREATE TABLE IF NOT EXISTS `" + tableName + "`" + " (" +
+		"`id` bigint(20) NOT NULL COMMENT '话单唯一ID'," +
 		"`caller_ip` varchar(64) DEFAULT NULL COMMENT '主叫IP', " +
 		"`caller_port` int(8) DEFAULT NULL COMMENT '主叫端口'," +
 		"`callee_ip` varchar(64) DEFAULT NULL COMMENT '被叫IP'," +
@@ -118,11 +113,10 @@ func CreateTable(tableName string) {
 		"`duration` int(8) DEFAULT '0' COMMENT '通话时长'," +
 		"`fraud_type` varchar(32) DEFAULT NULL COMMENT '诈骗类型'," +
 		"`create_time` datetime DEFAULT NULL COMMENT '生成时间'," +
-		"PRIMARY KEY (`id`)," +
-		"UNIQUE KEY `cdr_uuid` (`uuid`) USING BTREE" +
+		"PRIMARY KEY (`id`)" +
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"
 
-	_, err := orm.NewOrm().Raw(sql).Exec()
+	_, err = orm.NewOrm().Raw(sql).Exec()
 	if err != nil {
 		log.Error(err)
 	}
@@ -133,20 +127,19 @@ func MultiInsertCDR(tableName string, cdrs []*VoipRestoredCdr) {
 		return
 	}
 
-	sql := "INSERT INTO " + tableName + "(call_id,uuid,caller_ip,caller_port,callee_ip,callee_port,caller_num,callee_num," +
-		"caller_device,callee_device,callee_province,callee_city,connect_time,disconnect_time,duration, create_time) VALUES "
-
-	buf := bytes.Buffer{}
-	buf.Write([]byte(sql))
+	sqlBuffer.Reset()
+	sqlBuffer.WriteString("INSERT INTO " + tableName + sqlWords)
 	for _, cdr := range cdrs {
-		buf.WriteString(fmt.Sprintf(`("%s","%s","%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s",%d,%d,%d,"%s"),`,
-			cdr.CallId, cdr.Uuid, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
+		sqlBuffer.WriteString(fmt.Sprintf(`(%d,"%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s",%d,%d,%d,"%s"),`,
+			cdr.Id, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
 			cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration, cdr.CreateTime))
+		// 用完回收
+		cdr.Free()
 	}
 	// 替换最后一个','为';'
-	buf.Bytes()[buf.Len()-1] = ';'
+	sqlBuffer.Bytes()[sqlBuffer.Len()-1] = ';'
 
-	_, err := orm.NewOrm().Raw(buf.String()).Exec()
+	_, err := orm.NewOrm().Raw(sqlBuffer.String()).Exec()
 	if err != nil {
 		log.Error(err)
 	}
