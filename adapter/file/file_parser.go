@@ -88,7 +88,7 @@ func (rfp *RawFileParser) FlushFileList() {
 	var fileList []FileInfoX
 	for _, info := range dirInfo {
 		// 只处理.txt文件
-		if !(strings.HasSuffix(info.Name(), ".txt")) {
+		if !strings.HasSuffix(info.Name(), ".txt") {
 			continue
 		}
 		// 对应.ok文件未生成，标识数据未写完，不处理.txt文件
@@ -129,8 +129,34 @@ func (rfp *RawFileParser) FlushFileList() {
 		return
 	}
 
-	// 当天文件都已写完，并且现在时间日期不是最新写完文件时间日期，立即切换到下一天日期目录
-	if todayComplete && time.Now().Day() != subPathTime.Day() {
+	// 当前系统日期不是当前目录日期
+	if time.Now().Day() != subPathTime.Day() {
+		// 当天文件还没写完
+		if !todayComplete {
+			// 不等了。把未生成ok文件对应的txt文件直接入队
+			fileList = fileList[:0]
+			for _, info := range dirInfo {
+				if strings.HasSuffix(info.Name(), ".txt") && !fileExist(currentPath+"/"+info.Name()+".ok") {
+					fileList = append(fileList, FileInfoX{
+						name:     info.Name(),
+						dtime:    info.ModTime(),
+						filepath: filepath.Join(currentPath, info.Name()),
+					})
+				}
+			}
+
+			if len(fileList) != 0 {
+				// 按修改时间排序，并记录最新那个文件写完时间
+				rfp.sortFileList(fileList)
+				//rfp.newestWrittenTime = fileList[len(fileList)-1].dtime
+
+				for _, file := range fileList {
+					rfp.Files <- file
+				}
+			}
+		}
+
+		// 立即滚动到下一天日期目录
 		rfp.newestWrittenTime = time.Time{}
 		rfp.CurrentDaysPath = getNextDaysReadPath(subPathTime)
 	}
