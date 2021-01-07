@@ -30,7 +30,7 @@ type runner struct {
 }
 
 func (r *runner) sender() {
-	ticker := time.NewTicker(time.Second * 3)
+	ticker := time.NewTicker(time.Second * 1)
 	for {
 		select {
 		case <-r.stop:
