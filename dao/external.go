@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego/orm"
+	"time"
 )
 
 var (
@@ -142,6 +143,14 @@ func MultiInsertCDR(tableName string, cdrs []*VoipRestoredCdr) {
 	log.Debugf("%4d CDRs (total %d) -> '%s'", len(cdrs), cdrsCount, tableName)
 }
 
-func LogCDR(cdr *VoipRestoredCdr) {
+func InsertCDR(cdr *VoipRestoredCdr) {
 	asyncDao.LogCDR(cdr)
+}
+
+func UpdateCDRConnectTime(t time.Time)  {
+	
+}
+
+func UpdateCDRDisconnectTime(t time.Time)  {
+	
 }

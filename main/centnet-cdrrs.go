@@ -92,7 +92,7 @@ func printMemStats() {
     var m runtime.MemStats
     go func() {
         for {
-            time.Sleep(time.Minute * 30)
+            time.Sleep(time.Minute * 10)
             runtime.ReadMemStats(&m)
             log.Debugf("Alloc = %vMB Sys = %vMB NumGC = %v",
                 m.Alloc/1024/1024, m.Sys/1024/1024, m.NumGC)

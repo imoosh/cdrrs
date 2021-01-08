@@ -18,7 +18,7 @@ func main() {
 	}
 	for i := 0; i < n; i++ {
 		now := time.Now().Format("20060102150405.000000")
-		mock(os.Args[1], now)
+		go mock(os.Args[1], now)
 	}
 }
 
