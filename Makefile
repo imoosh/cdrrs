@@ -26,11 +26,11 @@ endif
 dev: darwin
 
 darwin :
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/centnet-cdrrs main/centnet-cdrrs.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/centnet-cdrrs main/main.go
 
 # Cross compilation
 linux :
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/centnet-cdrrs main/centnet-cdrrs.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64  go build $(GOBUILD_FLAGS)  -o $(BUILD_PATH)/bin/centnet-cdrrs main/main.go
 
 test:
 	go test -v ./...

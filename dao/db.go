@@ -10,11 +10,12 @@ import (
 )
 
 var (
-	asyncDao                        AsyncDao
-	emptyCDR                        = VoipRestoredCdr{}
-	fixedPhoneNumberAttributionMap  = make(map[string]interface{})
-	mobilePhoneNumberAttributionMap = make(map[string]interface{})
-	cdrPool                         = sync.Pool{New: func() interface{} { return &VoipRestoredCdr{} }}
+	asyncDao                AsyncDao
+	emptyCDR                = VoipCDR{}
+	cdrTablePrefix          = "cdr_"
+	fixedNumberPositionMap  = make(map[string]interface{})
+	mobileNumberPositionMap = make(map[string]interface{})
+	cdrPool                 = sync.Pool{New: func() interface{} { return &VoipCDR{} }}
 )
 
 type Config struct {
@@ -25,7 +26,7 @@ type Config struct {
 }
 
 type AsyncDao struct {
-	msgQ      chan *VoipRestoredCdr
+	msgQ      chan *VoipCDR
 	wg        sync.WaitGroup
 	closeChan chan struct{}
 	c         *Config
@@ -34,17 +35,17 @@ type AsyncDao struct {
 func (ad *AsyncDao) needToCreateTable(cdr, last time.Time) bool {
 	// 分表名格式为voip_restored_cdr_YYYYMMDD，cdrCreateTime格式：2006-01-02 15:04:05，lastTableSuffix格式为：2006-01-02
 	// 判断当前cdr创建日期是否与上次操作分表时间相同，不同则新建表
-	return !(cdr.Year() == last.Year() && cdr.Month() == last.Month() && cdr.Day() == last.Day())
+	return !(cdr.Year() == last.Year() && cdr.Month() == last.Month() && cdr.Day() == last.Day() && cdr.Minute() == last.Minute())
 	//return !(cdr.Unix() == last.Unix())
 }
 
 func (ad *AsyncDao) Run() {
-	var cache []*VoipRestoredCdr
+	var cache []*VoipCDR
 	duration := time.Duration(ad.c.FlushPeriod) * time.Second
 	ticker := time.NewTicker(duration)
 
 	lastTime := time.Time{}
-	curTableName := "voip_restored_cdr_" + time.Now().Format("20060102")
+	curTableName := cdrTablePrefix + time.Now().Format("2006010215")
 
 	go func() {
 		for {
@@ -53,8 +54,7 @@ func (ad *AsyncDao) Run() {
 				// 如需要创建新表，先建表，再刷新缓存到旧表
 				if ad.needToCreateTable(m.CreateTimeX, lastTime) {
 					lastTime = time.Now()
-					curTableName = "voip_restored_cdr_" + lastTime.Format("20060102")
-					//CreateTable("voip_restored_cdr_" + m.CreateTimeX.Format("20060102"))
+					curTableName = cdrTablePrefix + lastTime.Format("2006010215")
 					CreateTable(curTableName)
 					// 将前一天的部分话单先入旧库
 					MultiInsertCDR(curTableName, cache)
@@ -75,11 +75,11 @@ func (ad *AsyncDao) Run() {
 	}()
 }
 
-func (ad *AsyncDao) LogCDR(cdr *VoipRestoredCdr) {
+func (ad *AsyncDao) LogCDR(cdr *VoipCDR) {
 	ad.msgQ <- cdr
 }
 
-type VoipRestoredCdr struct {
+type VoipCDR struct {
 	Id int64 `json:"id"`
 	//CallId         string    `json:"callId"`
 	CallerIp       string    `json:"callerIp"`
@@ -100,11 +100,11 @@ type VoipRestoredCdr struct {
 	CreateTimeX    time.Time `json:"-" orm:"-"`
 }
 
-func NewCDR() *VoipRestoredCdr {
-	return cdrPool.Get().(*VoipRestoredCdr)
+func NewCDR() *VoipCDR {
+	return cdrPool.Get().(*VoipCDR)
 }
 
-func (cdr *VoipRestoredCdr) Free() {
+func (cdr *VoipCDR) Free() {
 	*cdr = emptyCDR
 	cdrPool.Put(cdr)
 }
@@ -132,7 +132,7 @@ func Init(c *Config) error {
 		return errors.New("orm.RegisterDataBase failed")
 	}
 
-	orm.RegisterModel(new(VoipRestoredCdr))
+	orm.RegisterModel(new(VoipCDR))
 	orm.RegisterModel(new(PhonePosition))
 
 	// 将号码归属地表预读到内存中，加速查询速度
@@ -142,7 +142,7 @@ func Init(c *Config) error {
 	}
 
 	asyncDao = AsyncDao{
-		msgQ:      make(chan *VoipRestoredCdr, c.MaxCacheCapacity),
+		msgQ:      make(chan *VoipCDR, c.MaxCacheCapacity),
 		closeChan: make(chan struct{}),
 		wg:        sync.WaitGroup{},
 		c:         c,
@@ -159,8 +159,8 @@ func Init(c *Config) error {
 //    return []byte(stamp), nil
 //}
 //
-//func (cdr VoipRestoredCdr) MarshalJSON() ([]byte, error) {
-//    type TmpJSON VoipRestoredCdr
+//func (cdr VoipCDR) MarshalJSON() ([]byte, error) {
+//    type TmpJSON VoipCDR
 //    return json.Marshal(&struct {
 //        TmpJSON
 //        ConnectTime    DateTime `json:"connectTime"`

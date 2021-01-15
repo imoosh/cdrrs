@@ -3,9 +3,8 @@ package conf
 import (
 	"bytes"
 	"centnet-cdrrs/adapter/file"
-	"centnet-cdrrs/adapter/kafka"
-	"centnet-cdrrs/adapter/redis"
 	"centnet-cdrrs/dao"
+	"centnet-cdrrs/library/kafka"
 	"centnet-cdrrs/library/log"
 	"fmt"
 	"github.com/BurntSushi/toml"
@@ -19,7 +18,6 @@ type Config struct {
 	Logging    *log.Config
 	Kafka      *kafka.Config
 	Mysql      *dao.Config
-	Redis      *redis.Config
 	FileParser *file.Config
 }
 

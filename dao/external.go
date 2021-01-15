@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego/orm"
-	"time"
 )
 
 var (
@@ -37,9 +36,9 @@ func CachePhoneNumberAttribution() error {
 		return err
 	}
 	for _, val := range pps {
-		fixedPhoneNumberAttributionMap[val.Code1] = val
+		fixedNumberPositionMap[val.Code1] = val
 	}
-	log.Debugf("fixedPhoneNumberAttributionMap cached %d items (%d queried)", len(fixedPhoneNumberAttributionMap), n)
+	log.Debugf("fixedNumberPositionMap cached %d items (%d queried)", len(fixedNumberPositionMap), n)
 
 	// 查询并缓存手机号码归属地列表
 	n, err = o.QueryTable(pp).Filter("phone__isnull", false).All(&pps, "Phone", "Province", "City")
@@ -47,47 +46,78 @@ func CachePhoneNumberAttribution() error {
 		return err
 	}
 	for _, val := range pps {
-		mobilePhoneNumberAttributionMap[val.Phone] = val
+		mobileNumberPositionMap[val.Phone] = val
 	}
-	log.Debugf("mobilePhoneNumberAttributionMap cached %d items (%d queried)", len(mobilePhoneNumberAttributionMap), n)
+	log.Debugf("mobileNumberPositionMap cached %d items (%d queried)", len(mobileNumberPositionMap), n)
 
 	return nil
 }
 
 // 固话号码获取归属地
-// n: 3、4：通过前3位或前4位获取归属地，为-1时，前3位或4位都尝试获取
-func GetPositionByFixedPhoneNumber(num string, n int) (PhonePosition, error) {
-	if len(num) != 11 && len(num) != 12 {
-		//log.Error("invalid num number:", num)
+func QueryFixedNumberPosition(num string) (PhonePosition, error) {
+	length := len(num)
+	if length != 11 && length != 12 {
 		return PhonePosition{}, errNotFound
 	}
 
-	if n == 3 || n == -1 {
-		if pp, ok := fixedPhoneNumberAttributionMap[num[0:3]]; ok {
+	// 若长度为11，先尝试识别前三位归属，再尝试前四位归属
+	if length == 11 {
+		if pp, ok := fixedNumberPositionMap[num[0:3]]; ok {
 			return pp.(PhonePosition), nil
 		}
 	}
 
-	if n == 4 || n == -1 {
-		if pp, ok := fixedPhoneNumberAttributionMap[num[0:4]]; ok {
-			return pp.(PhonePosition), nil
-		}
+	// 若长度为12，尝试获取前四位归属
+	if pp, ok := fixedNumberPositionMap[num[0:4]]; ok {
+		return pp.(PhonePosition), nil
 	}
 
 	return PhonePosition{}, errNotFound
 }
 
+func ValidateFixedNumber(num string) bool {
+	length := len(num)
+	if length != 11 && length != 12 {
+		return false
+	}
+
+	// 若长度为11，先尝试识别前三位归属，再尝试前四位归属
+	if length == 11 {
+		if _, ok := fixedNumberPositionMap[num[0:3]]; ok {
+			return true
+		}
+	}
+
+	// 若长度为12，尝试获取前四位归属
+	if _, ok := fixedNumberPositionMap[num[0:4]]; ok {
+		return true
+	}
+
+	return false
+}
+
 // 手机号码获取归属地
-func GetPositionByMobilePhoneNumber(num string) (PhonePosition, error) {
+func QueryMobileNumberPosition(num string) (PhonePosition, error) {
 	if len(num) != 11 {
 		//log.Error("invalid num number:", num)
 		return PhonePosition{}, errNotFound
 	}
 
-	if pp, ok := mobilePhoneNumberAttributionMap[num[0:7]]; ok {
+	if pp, ok := mobileNumberPositionMap[num[0:7]]; ok {
 		return pp.(PhonePosition), nil
 	}
 	return PhonePosition{}, errNotFound
+}
+
+func ValidateMobileNumber(num string) bool {
+	if len(num) != 11 {
+		return false
+	}
+
+	if _, ok := mobileNumberPositionMap[num[0:7]]; ok {
+		return true
+	}
+	return false
 }
 
 func CreateTable(tableName string) {
@@ -117,7 +147,7 @@ func CreateTable(tableName string) {
 	}
 }
 
-func MultiInsertCDR(tableName string, cdrs []*VoipRestoredCdr) {
+func MultiInsertCDR(tableName string, cdrs []*VoipCDR) {
 	if len(cdrs) == 0 {
 		return
 	}
@@ -125,7 +155,7 @@ func MultiInsertCDR(tableName string, cdrs []*VoipRestoredCdr) {
 	sqlBuffer.Reset()
 	sqlBuffer.WriteString("INSERT INTO " + tableName + sqlWords)
 	for _, cdr := range cdrs {
-		sqlBuffer.WriteString(fmt.Sprintf(`(%d,"%s",%d,"%s",%d,"%s","%s","%s","%s","%s","%s",%d,%d,%d,"%s"),`,
+		sqlBuffer.WriteString(fmt.Sprintf(`(%d,'%s',%d,'%s',%d,'%s','%s','%s','%s','%s','%s',%d,%d,%d,'%s'),`,
 			cdr.Id, cdr.CallerIp, cdr.CallerPort, cdr.CalleeIp, cdr.CalleePort, cdr.CallerNum, cdr.CalleeNum, cdr.CallerDevice,
 			cdr.CalleeDevice, cdr.CalleeProvince, cdr.CalleeCity, cdr.ConnectTime, cdr.DisconnectTime, cdr.Duration, cdr.CreateTime))
 		// 用完回收
@@ -143,14 +173,6 @@ func MultiInsertCDR(tableName string, cdrs []*VoipRestoredCdr) {
 	log.Debugf("%4d CDRs (total %d) -> '%s'", len(cdrs), cdrsCount, tableName)
 }
 
-func InsertCDR(cdr *VoipRestoredCdr) {
+func InsertCDR(cdr *VoipCDR) {
 	asyncDao.LogCDR(cdr)
-}
-
-func UpdateCDRConnectTime(t time.Time)  {
-	
-}
-
-func UpdateCDRDisconnectTime(t time.Time)  {
-	
 }

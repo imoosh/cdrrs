@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewRawFileParser(t *testing.T) {
-	parser := NewRawFileParser(&Config{
+	parser := NewParser(&Config{
 		RootPath:      ".",
 		StartDatePath: "",
 	})

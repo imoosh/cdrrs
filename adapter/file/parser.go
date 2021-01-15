@@ -41,7 +41,7 @@ type RawFileParser struct {
 	numFiles          *atomic.Int32
 }
 
-func NewRawFileParser(c *Config) *RawFileParser {
+func NewParser(c *Config) *RawFileParser {
 	return &RawFileParser{
 		conf:              c,
 		CurrentDaysPath:   c.StartDatePath,

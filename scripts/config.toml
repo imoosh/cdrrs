@@ -29,19 +29,7 @@
     # 话单批量插入条数
     maxFlushCapacity = 10000
     # 话单缓存最大数量
-    maxCacheCapacity = 50000
-
-# 缓存服务配置
-[redis]
-	# 主机地址
-    host = "192.168.1.205:6379"
-    # 为空，不填
-    password = ""
-    idleTimeout = 600
-    maxIdle = 10
-    maxActive = 10000
-    # 缓存失效时间默认为1h
-    cacheExpire = 3600
+    maxCacheCapacity = 100000
 
 [kafka]
     # 诈骗模型服务

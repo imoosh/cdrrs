@@ -2,33 +2,21 @@ package model
 
 import (
 	"bytes"
-	cmap "centnet-cdrrs/adapter/cache"
-	"centnet-cdrrs/adapter/redis"
-	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/model/prot/sip"
-	"encoding/json"
 	"github.com/pkg/errors"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
-)
-
-const (
-	InviteCallIdPrefix = iota
-	ByeCallIdPrefix
 )
 
 var (
-	emptySip              = AnalyticSipPacket{}
-	sipPool               = sync.Pool{New: func() interface{} { return &AnalyticSipPacket{} }}
-	CallIdCache           = cmap.NewExpireMap()
+	emptySip              = SipPacket{}
+	sipPool               = sync.Pool{New: func() interface{} { return &SipPacket{} }}
 	errUnresolvableNumber = errors.New("unresolvable number")
-	errResolveSipPacket   = errors.New("resolve sip packet error")
 )
 
-type AnalyticSipPacket struct {
+type SipPacket struct {
 	//Id            uint64 `json:"id"`
 	//EventId       string `json:"eventId"`
 	EventTime     string `json:"t"`
@@ -57,114 +45,19 @@ type AnalyticSipPacket struct {
 	//ContactPort   int    `json:"contactPort"`
 	UserAgent string `json:"ua"`
 
-	CalleeInfo CalleeInfo `json:"ci"`
-	GetAgain   bool       `json:"nok"`
+	GetAgain bool `json:"nok"`
 }
 
-func cacheInviteCallId(id string) (interface{}, bool) {
-	return CallIdCache.SetWithExpire(id, InviteCallIdPrefix)
+func NewSip() *SipPacket {
+	return sipPool.Get().(*SipPacket)
 }
 
-func cacheByeCallId(id string) (interface{}, bool) {
-	return CallIdCache.SetWithExpire(id, ByeCallIdPrefix)
-}
-
-func isCachedInviteCallId(id string) bool {
-	_, ok := CallIdCache.Get(id)
-	return ok
-}
-
-func isCachedByeCallId(id string) bool {
-	_, ok := CallIdCache.Get(id)
-	return ok
-}
-
-func deleteInviteCall(id string) {
-	CallIdCache.Del(id)
-}
-
-func deleteByeCall(id string) {
-	CallIdCache.Del(id)
-}
-
-func NewSip() *AnalyticSipPacket {
-	return sipPool.Get().(*AnalyticSipPacket)
-}
-
-func (pkt *AnalyticSipPacket) Free() {
+func (pkt *SipPacket) Free() {
 	*pkt = emptySip
 	sipPool.Put(pkt)
 }
 
-func (pkt *AnalyticSipPacket) Init(asp *AnalyticSipPacket) *AnalyticSipPacket {
-	//pkt.EventId = asp.EventId
-	pkt.EventTime = asp.EventTime
-	pkt.Sip = asp.Sip
-	pkt.Sport = asp.Sport
-	pkt.Dip = asp.Dip
-	pkt.Dport = asp.Dport
-	pkt.CallId = asp.CallId
-	pkt.CseqMethod = asp.CseqMethod
-	pkt.ReqStatusCode = asp.ReqStatusCode
-	pkt.FromUser = asp.FromUser
-	pkt.ToUser = asp.ToUser
-	pkt.UserAgent = asp.UserAgent
-	pkt.CalleeInfo = asp.CalleeInfo
-	pkt.GetAgain = asp.GetAgain
-	return pkt
-}
-
-func (pkt *AnalyticSipPacket) doInvite200OKMessage() error {
-	// 尝试本地缓存，如果缓存失败，则删除缓存并返回已缓存的数据，即BYE-200OK CallId
-	if v, ok := cacheInviteCallId(pkt.CallId); ok {
-		// 序列化sip报文
-		pktStr, err := json.Marshal(pkt)
-		if err != nil {
-			return err
-		}
-
-		// invite插入redis
-		redis.AsyncStoreWithExpire(pkt.CallId, string(pktStr), time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
-		return nil
-	} else {
-		if v.(int) == ByeCallIdPrefix {
-			redis.AsyncLoad(pkt.CallId, redis.DelayHandleUnit{
-				Func: cdrRestore,
-				Args: pkt,
-			})
-			return nil
-		}
-	}
-
-	return errResolveSipPacket
-}
-
-func (pkt *AnalyticSipPacket) doBye200OKMessage() error {
-	// 尝试本地缓存，如果缓存失败，则删除缓存并返回已缓存的数据，即INVITE-200OK CallId
-	if v, ok := cacheByeCallId(pkt.CallId); ok {
-		// 序列化sip报文
-		pktStr, err := json.Marshal(pkt)
-		if err != nil {
-			return err
-		}
-
-		// invite插入redis
-		redis.AsyncStoreWithExpire(pkt.CallId, string(pktStr), time.Second*time.Duration(conf.Conf.Redis.CacheExpire))
-		return nil
-	} else {
-		if v.(int) == InviteCallIdPrefix {
-			redis.AsyncLoad(pkt.CallId, redis.DelayHandleUnit{
-				Func: cdrRestore,
-				Args: pkt,
-			})
-			return nil
-		}
-	}
-
-	return errResolveSipPacket
-}
-
-func validatePhoneNumber(num string) bool {
+func validateNumberString(num string) bool {
 	for _, v := range num {
 		if v < '0' || v > '9' {
 			return false
@@ -173,15 +66,29 @@ func validatePhoneNumber(num string) bool {
 	return true
 }
 
-type CalleeInfo struct {
-	Num string            `json:"n"`
-	Pos dao.PhonePosition `json:"p"`
+func parsePositionFrom(num string) (dao.PhonePosition, error) {
+	length := len(num)
+	if !validateNumberString(num) || length < 11 {
+		return dao.PhonePosition{}, errUnresolvableNumber
+	}
+
+	if strings.HasPrefix(num, "1") {
+		return dao.QueryMobileNumberPosition(num)
+	} else if strings.HasPrefix(num, "0") {
+		return dao.QueryFixedNumberPosition(num)
+	} else if strings.HasPrefix(num, "852") {
+		return dao.PhonePosition{Province: "香港", City: "香港"}, nil
+	} else if strings.HasPrefix(num, "853") {
+		return dao.PhonePosition{Province: "澳门", City: "澳门"}, nil
+	}
+
+	return dao.PhonePosition{}, errUnresolvableNumber
 }
 
-func (info *CalleeInfo) parse(num string) error {
+func parseObviousNumber(num string) string {
 	length := len(num)
-	if !validatePhoneNumber(num) || length < 11 {
-		return errUnresolvableNumber
+	if !validateNumberString(num) || length < 11 {
+		return ""
 	}
 
 	var (
@@ -193,15 +100,13 @@ func (info *CalleeInfo) parse(num string) error {
 		callee := calleeNum[length-11:]
 		if strings.HasPrefix(callee, "1") {
 			// 手机号码归属查询
-			if info.Pos, err = dao.GetPositionByMobilePhoneNumber(callee); err == nil {
-				info.Num = callee
-				return nil
+			if _, err = dao.QueryMobileNumberPosition(callee); err == nil {
+				return callee
 			}
 		} else if strings.HasPrefix(callee, "0") {
 			// 座机号码归属查询
-			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, -1); err == nil {
-				info.Num = callee
-				return nil
+			if _, err = dao.QueryFixedNumberPosition(callee); err == nil {
+				return callee
 			}
 		}
 	}
@@ -210,16 +115,14 @@ func (info *CalleeInfo) parse(num string) error {
 		callee := calleeNum[length-12:]
 		if strings.HasPrefix(callee, "0") {
 			// 座机号码归属查询
-			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
-				info.Num = callee
-				return nil
+			if _, err = dao.QueryFixedNumberPosition(callee); err == nil {
+				return callee
 			}
 		} else if strings.HasPrefix(callee, "86") {
 			// 86xx xxxx xxxx -> 80xx xxxx xxxx -> 0xx xxxx xxxx
 			callee = strings.Replace(callee, "86", "80", 1)[1:]
-			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, -1); err == nil {
-				info.Num = callee
-				return nil
+			if _, err = dao.QueryFixedNumberPosition(callee); err == nil {
+				return callee
 			}
 		}
 	}
@@ -229,26 +132,20 @@ func (info *CalleeInfo) parse(num string) error {
 		if strings.HasPrefix(callee, "86") {
 			// 86xxx xxxx xxxx -> 80xxx xxxx xxxx -> 0xxx xxxx xxxx
 			callee = strings.Replace(callee, "86", "80", 1)[1:]
-			if info.Pos, err = dao.GetPositionByFixedPhoneNumber(callee, 4); err == nil {
-				info.Num = callee
-				return nil
+			if _, err = dao.QueryFixedNumberPosition(callee); err == nil {
+				return callee
 			}
 		}
 	}
 
-	{
-		callee := calleeNum[length-11:]
-		if strings.HasPrefix(callee, "852") {
-			info.Num = callee
-			info.Pos = dao.PhonePosition{Province: "香港", City: "香港"}
-			return nil
-		} else if strings.HasPrefix(callee, "853") {
-			info.Num = callee
-			info.Pos = dao.PhonePosition{Province: "澳门", City: "澳门"}
-			return nil
-		}
+	callee := calleeNum[length-11:]
+	if strings.HasPrefix(callee, "852") {
+		return callee
+	} else if strings.HasPrefix(callee, "853") {
+		return callee
 	}
-	return errUnresolvableNumber
+
+	return ""
 }
 
 func atoi(s string, n int) (int, error) {
@@ -259,7 +156,7 @@ func atoi(s string, n int) (int, error) {
 	return strconv.Atoi(s)
 }
 
-func (pkt *AnalyticSipPacket) parse(line interface{}) error {
+func (pkt *SipPacket) parse(line interface{}) error {
 	ss := split(pretreatment(line.([]byte)))
 	if len(ss) == 0 {
 		return errInvalidRawTextData
@@ -318,8 +215,8 @@ func (pkt *AnalyticSipPacket) parse(line interface{}) error {
 
 	// 被叫号码字段未解析出手机号码或坐席号码归属地，直接丢弃(同一会话中所有包的FROM字段或TO字段都一样)
 	var err error
-	err = pkt.CalleeInfo.parse(pkt.ToUser)
-	if err != nil {
+	pkt.ToUser = parseObviousNumber(pkt.ToUser)
+	if len(pkt.ToUser) == 0 {
 		sipMsg.Free()
 		return errInvalidSipPacket
 	}
