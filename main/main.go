@@ -1,11 +1,9 @@
 package main
 
 import (
-	"centnet-cdrrs/adapter/file"
+	"centnet-cdrrs/common/log"
 	"centnet-cdrrs/conf"
-	"centnet-cdrrs/dao"
-	"centnet-cdrrs/library/log"
-	"centnet-cdrrs/model"
+	"centnet-cdrrs/service"
 	"flag"
 	"fmt"
 	"os"
@@ -46,7 +44,6 @@ func getAppVersion() string {
 }
 
 func main() {
-	var err error
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	/* 解析参数 */
@@ -57,21 +54,7 @@ func main() {
 	/* 日志模块初始化 */
 	log.Init(conf.Conf.Logging)
 
-	/* 数据库模块初始化 */
-	err = dao.Init(conf.Conf.Mysql)
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
-	}
-
-	err = model.Init()
-	if err != nil {
-		log.Error("model.Init failed")
-		os.Exit(-1)
-	}
-
-	/* 开启文件解析 */
-	file.NewParser(conf.Conf.FileParser).Run(model.DoLine)
+	service.New(conf.Conf)
 
 	printMemStats()
 
