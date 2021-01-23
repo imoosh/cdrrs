@@ -1,17 +1,19 @@
 package kafka
 
 import (
+	xtime "centnet-cdrrs/common/time"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"testing"
+	"time"
 )
 
 var pc = ProducerConfig{
 	Topic:      "SipPacket",
 	Broker:     "192.168.1.205:9092",
-	Frequency:  500,
+	Frequency:  xtime.Duration(500*time.Millisecond),
 	MaxMessage: 1 << 20,
 }
 

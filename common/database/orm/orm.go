@@ -2,6 +2,7 @@ package orm
 
 import (
     "centnet-cdrrs/common/log"
+    xtime "centnet-cdrrs/common/time"
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
     "gorm.io/gorm/logger"
@@ -12,7 +13,7 @@ type Config struct {
     DSN         string        // database source name
     Active      int           // pool
     Idle        int           // pool
-    IdleTimeout time.Duration // connect max life time
+    IdleTimeout xtime.Duration // connect max life time
 }
 
 func NewMySQL(c *Config) (db *gorm.DB) {
@@ -37,7 +38,7 @@ func NewMySQL(c *Config) (db *gorm.DB) {
 
     sqlDB.SetMaxIdleConns(c.Idle)
     sqlDB.SetMaxOpenConns(c.Active)
-    sqlDB.SetConnMaxLifetime(c.IdleTimeout)
+    sqlDB.SetConnMaxLifetime(time.Duration(c.IdleTimeout))
 
     return ormDB
 }

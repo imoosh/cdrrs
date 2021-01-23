@@ -39,45 +39,45 @@ func (cp *CDRProducer) Put(cdr *dao.VoipCDR) {
 	cp.Q <- cdr
 }
 
-func (cp *CDRProducer) Gen(callId string, pkt *voip.SipItem) *dao.VoipCDR {
+func (cp *CDRProducer) Gen(callId string, item *voip.SipItem) *dao.VoipCDR {
 	var (
 		err            error
 		connectTime    time.Time
 		disConnectTime time.Time
-		connTimeLen    = len(pkt.ConnectTime)
-		disConnTimeLen = len(pkt.DisconnectTime)
+		connTimeLen    = len(item.ConnectTime)
+		disConnTimeLen = len(item.DisconnectTime)
 	)
 
 	if connTimeLen != 0 {
-		connectTime, err = time.ParseInLocation("20060102150405", pkt.ConnectTime, time.Local)
+		connectTime, err = time.ParseInLocation("20060102150405", item.ConnectTime, time.Local)
 		if err != nil {
-			log.Errorf("time.Parse error: %s", pkt.ConnectTime)
+			log.Errorf("time.Parse error: %s", item.ConnectTime)
 			return nil
 		}
 	}
 	if disConnTimeLen != 0 {
-		disConnectTime, err = time.ParseInLocation("20060102150405", pkt.DisconnectTime, time.Local)
+		disConnectTime, err = time.ParseInLocation("20060102150405", item.DisconnectTime, time.Local)
 		if err != nil {
-			log.Errorf("time.Parse error: %s", pkt.DisconnectTime)
+			log.Errorf("time.Parse error: %s", item.DisconnectTime)
 			return nil
 		}
 	}
-	pos, err := voip.ParsePositionFrom(pkt.Callee)
+	pos, err := voip.ParsePositionFrom(item.Callee)
 	if err != nil {
-		log.Errorf("parse position error(%s)", pkt.Callee)
+		log.Errorf("parse position error(%s)", item.Callee)
 		return nil
 	}
 
 	//填充话单字段信息
 	cdr := cp.P.New()
-	cdr.CallerIp = pkt.SrcIP
-	cdr.CallerPort = int(pkt.SrcPort)
-	cdr.CalleeIp = pkt.DestIP
-	cdr.CalleePort = int(pkt.DestPort)
-	cdr.CallerNum = pkt.Caller
-	cdr.CalleeNum = pkt.Callee
+	cdr.CallerIp = item.SrcIP
+	cdr.CallerPort = int(item.SrcPort)
+	cdr.CalleeIp = item.DestIP
+	cdr.CalleePort = int(item.DestPort)
+	cdr.CallerNum = item.Caller
+	cdr.CalleeNum = item.Callee
 	cdr.CallerDevice = ""
-	cdr.CalleeDevice = pkt.CalleeDevice
+	cdr.CalleeDevice = item.CalleeDevice
 	cdr.FraudType = ""
 
 	if connTimeLen != 0 {
@@ -126,8 +126,8 @@ func (cp *CDRProducer) Dispatch() {
 	}()
 }
 
-func cdrTable(t time.Time, inval time.Duration) string {
-	return cdrTablePrefix + t.Truncate(time.Second*inval).Format("20060102150405")
+func cdrTable(t time.Time, period time.Duration) string {
+	return cdrTablePrefix + t.Truncate(period).Format("20060102150405")
 }
 
 func cdrId(t time.Time) int64 {

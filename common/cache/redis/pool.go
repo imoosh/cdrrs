@@ -16,6 +16,7 @@ package redis
 
 import (
 	"bytes"
+	xtime "centnet-cdrrs/common/time"
 	"context"
 	"crypto/rand"
 	"crypto/sha1"
@@ -27,7 +28,6 @@ import (
 
 	"centnet-cdrrs/common/container/pool"
 	"centnet-cdrrs/common/net/trace"
-	xtime "centnet-cdrrs/common/time"
 )
 
 var beginTime, _ = time.Parse("2006-01-02 15:04:05", "2006-01-02 15:04:05")

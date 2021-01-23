@@ -2,9 +2,11 @@ package conf
 
 import (
     "bytes"
+    "centnet-cdrrs/common/cache/redis"
     "centnet-cdrrs/common/database/orm"
     "centnet-cdrrs/common/kafka"
     "centnet-cdrrs/common/log"
+    xtime "centnet-cdrrs/common/time"
     "centnet-cdrrs/service/adapters/file"
     "fmt"
     "github.com/BurntSushi/toml"
@@ -19,15 +21,16 @@ type Config struct {
     Kafka      *kafka.Config
     ORM        *orm.Config
     CDR        *CDRConfig
+    Redis      *redis.Config
     FileParser *file.Config
 }
 
 type CDRConfig struct {
-    CachedLife     int
+    CachedLife     xtime.Duration
     MaxFlushCap    int
     MaxCacheCap    int
-    CdrFlushPeriod int
-    CdrTablePeriod int
+    CdrFlushPeriod xtime.Duration
+    CdrTablePeriod xtime.Duration
 }
 
 func (c *Config) String() string {

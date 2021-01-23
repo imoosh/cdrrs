@@ -2,11 +2,8 @@ package service
 
 import (
 	"centnet-cdrrs/common/cache/local"
-	"centnet-cdrrs/common/cache/redis"
-	"centnet-cdrrs/common/container/pool"
 	"centnet-cdrrs/common/kafka"
 	"centnet-cdrrs/common/log"
-	xtime "centnet-cdrrs/common/time"
 	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
 	"centnet-cdrrs/service/adapters/file"
@@ -57,7 +54,7 @@ func New(c *conf.Config) (s *Service, err error) {
 	}
 
 	// 本地缓存引擎
-	mc := local.NewShardedCache(time.Duration(c.CDR.CachedLife)*time.Second, time.Second*30, 1024)
+	mc := local.NewShardedCache(time.Duration(c.CDR.CachedLife), time.Second*30, 1024)
 	mc.OnEvicted(func(k string, v interface{}) {
 		cdrPro.GenExpiredCDR(k, v.(*voip.SipItem))
 	})
@@ -80,23 +77,6 @@ func New(c *conf.Config) (s *Service, err error) {
 	s.parser.Run()
 
 	return s, nil
-}
-
-func getConfig() (c *redis.Config) {
-	c = &redis.Config{
-		Name:         "test",
-		Proto:        "tcp",
-		Addr:         "192.168.1.205:6379",
-		DialTimeout:  xtime.Duration(time.Second),
-		ReadTimeout:  xtime.Duration(time.Second * 10),
-		WriteTimeout: xtime.Duration(time.Second),
-	}
-	c.Config = &pool.Config{
-		Active:      20,
-		Idle:        2,
-		IdleTimeout: xtime.Duration(90 * time.Second),
-	}
-	return
 }
 
 //func writeCDRToTxt(m *kafka.ConsumerGroupMember, k, v interface{}) {
@@ -189,7 +169,7 @@ func (s *Service) handleCDR() {
 	var d time.Duration
 	var curTableName string
 
-	if d = time.Second * time.Duration(s.c.CDR.CdrFlushPeriod); d == 0 {
+	if d = time.Duration(s.c.CDR.CdrFlushPeriod); d == 0 {
 		d = time.Second * 10
 	}
 	ticker := time.NewTicker(d)
