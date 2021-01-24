@@ -4,6 +4,7 @@ import (
 	"centnet-cdrrs/common/log"
 	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
+	"centnet-cdrrs/model"
 	"centnet-cdrrs/service/voip"
 	"go.uber.org/atomic"
 	"time"
@@ -39,7 +40,7 @@ func (cp *CDRProducer) Put(cdr *dao.VoipCDR) {
 	cp.Q <- cdr
 }
 
-func (cp *CDRProducer) Gen(callId string, item *voip.SipItem) *dao.VoipCDR {
+func (cp *CDRProducer) Gen(callId string, item *model.SipItem) *dao.VoipCDR {
 	var (
 		err            error
 		connectTime    time.Time
@@ -98,7 +99,7 @@ func (cp *CDRProducer) Gen(callId string, item *voip.SipItem) *dao.VoipCDR {
 	return cdr
 }
 
-func (cp *CDRProducer) GenExpiredCDR(callId string, item *voip.SipItem) {
+func (cp *CDRProducer) GenExpiredCDR(callId string, item *model.SipItem) {
 	if len(item.Caller) != 0 && len(item.Callee) != 0 {
 		if cdr := cp.Gen(callId, item); cdr != nil {
 			cp.Put(cdr)

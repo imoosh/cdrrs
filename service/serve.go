@@ -6,6 +6,7 @@ import (
 	"centnet-cdrrs/common/log"
 	"centnet-cdrrs/conf"
 	"centnet-cdrrs/dao"
+	"centnet-cdrrs/model"
 	"centnet-cdrrs/service/adapters/file"
 	"centnet-cdrrs/service/cdr"
 	"centnet-cdrrs/service/voip"
@@ -56,7 +57,7 @@ func New(c *conf.Config) (s *Service, err error) {
 	// 本地缓存引擎
 	mc := local.NewShardedCache(time.Duration(c.CDR.CachedLife), time.Second*30, 1024)
 	mc.OnEvicted(func(k string, v interface{}) {
-		cdrPro.GenExpiredCDR(k, v.(*voip.SipItem))
+		cdrPro.GenExpiredCDR(k, v.(*model.SipItem))
 	})
 
 	// 初始化数据解析器
@@ -79,38 +80,6 @@ func New(c *conf.Config) (s *Service, err error) {
 	return s, nil
 }
 
-//func writeCDRToTxt(m *kafka.ConsumerGroupMember, k, v interface{}) {
-//    m.TotalCount++
-//    m.TotalBytes = m.TotalBytes + uint64(len(v.([]byte)))
-//
-//    _, err := writer.WriteString(string(v.([]byte)) + "\n")
-//    if err != nil {
-//        log.Error(err)
-//    }
-//}
-//
-//func writeCDRToDB(m *kafka.ConsumerGroupMember, k, v interface{}) {
-//    m.TotalCount++
-//    m.TotalBytes = m.TotalBytes + uint64(len(v.([]byte)))
-//
-//    var cdr dao.VoipCDR
-//    err := json.Unmarshal(v.([]byte), &cdr)
-//    if err != nil {
-//        log.Error(err)
-//        return
-//    }
-//}
-//
-//func initWriteCDRKafkaConsumer() {
-//    // kafka消费者： 话单写数据库
-//    kafka.NewConsumerGroupMember(&kafka.ConsumerConfig{
-//        Broker:              "192.168.1.205:9092",
-//        Topic:               "cdr",
-//        Group:               "cdr-db",
-//        GroupMembers:        1,
-//        FlowRateFlushPeriod: 3}, "cdr-write-db_01", writeCDRToDB)
-//}
-
 func (s *Service) DoLine(line interface{}) {
 
 	// 解析sip报文
@@ -121,7 +90,8 @@ func (s *Service) DoLine(line interface{}) {
 
 	// invite-200ok消息
 	if pkt.CseqMethod == "INVITE" && pkt.ReqStatusCode == 200 {
-		item := voip.NewSipItem()
+		item := model.NewSipItem()
+		item.CallId = pkt.CallId
 		item.Caller = pkt.FromUser
 		item.Callee = pkt.ToUser
 		item.SrcIP = pkt.Sip
@@ -133,8 +103,8 @@ func (s *Service) DoLine(line interface{}) {
 
 		if ok, v := s.mc.AddOrDel(pkt.CallId, item, 0); !ok {
 			// 结束时间不为空（bye消息处理过），合并成话单
-			if len(v.(*voip.SipItem).DisconnectTime) != 0 {
-				item.DisconnectTime = v.(*voip.SipItem).DisconnectTime
+			if len(v.(*model.SipItem).DisconnectTime) != 0 {
+				item.DisconnectTime = v.(*model.SipItem).DisconnectTime
 				if c := s.cdrPro.Gen(pkt.CallId, item); c != nil {
 					s.cdrPro.Put(c)
 				}
@@ -143,14 +113,14 @@ func (s *Service) DoLine(line interface{}) {
 		}
 
 	} else if pkt.CseqMethod == "BYE" && pkt.ReqStatusCode == 200 {
-		item := voip.NewSipItem()
+		item := model.NewSipItem()
 		item.DisconnectTime = pkt.EventTime
 
 		if ok, v := s.mc.AddOrDel(pkt.CallId, item, 0); !ok {
 			// 开始时间不为空（invite消息处理过），合并成话单
-			if len(v.(*voip.SipItem).ConnectTime) != 0 {
-				v.(*voip.SipItem).DisconnectTime = pkt.EventTime
-				if c := s.cdrPro.Gen(pkt.CallId, v.(*voip.SipItem)); c != nil {
+			if len(v.(*model.SipItem).ConnectTime) != 0 {
+				v.(*model.SipItem).DisconnectTime = pkt.EventTime
+				if c := s.cdrPro.Gen(pkt.CallId, v.(*model.SipItem)); c != nil {
 					s.cdrPro.Put(c)
 				}
 			}
@@ -222,3 +192,35 @@ func (s *Service) flushCDRToDB(tblName string, cdrs []*dao.VoipCDR) {
 	s.dao.MultiInsertCDR(tblName, cdrs)
 	s.clearCDRs()
 }
+
+//func writeCDRToTxt(m *kafka.ConsumerGroupMember, k, v interface{}) {
+//    m.TotalCount++
+//    m.TotalBytes = m.TotalBytes + uint64(len(v.([]byte)))
+//
+//    _, err := writer.WriteString(string(v.([]byte)) + "\n")
+//    if err != nil {
+//        log.Error(err)
+//    }
+//}
+//
+//func writeCDRToDB(m *kafka.ConsumerGroupMember, k, v interface{}) {
+//    m.TotalCount++
+//    m.TotalBytes = m.TotalBytes + uint64(len(v.([]byte)))
+//
+//    var cdr dao.VoipCDR
+//    err := json.Unmarshal(v.([]byte), &cdr)
+//    if err != nil {
+//        log.Error(err)
+//        return
+//    }
+//}
+//
+//func initWriteCDRKafkaConsumer() {
+//    // kafka消费者： 话单写数据库
+//    kafka.NewConsumerGroupMember(&kafka.ConsumerConfig{
+//        Broker:              "192.168.1.205:9092",
+//        Topic:               "cdr",
+//        Group:               "cdr-db",
+//        GroupMembers:        1,
+//        FlowRateFlushPeriod: 3}, "cdr-write-db_01", writeCDRToDB)
+//}

@@ -1,13 +1,20 @@
 package log
 
 import (
-    "centnet-cdrrs/common/log/_zap"
+	"centnet-cdrrs/common/log/_zap"
 	"fmt"
 	"go.uber.org/zap"
 	"time"
 )
 
-var _logger *Logger
+var _logger = NewLogger(&Config{
+	LogPath:      "./",
+	LogFile:      "main.log",
+	FileLevel:    "DEBUG",
+	ConsoleLevel: "DEBUG",
+	MaxAge:       7,
+	MaxSize:      10,
+})
 
 func NewLogger(c *Config) *Logger {
 	logger := &Logger{

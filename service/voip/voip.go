@@ -7,14 +7,11 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 var (
 	errInvalidSipPacket   = errors.New("not invite/bye 200 ok message")
 	errUnresolvableNumber = errors.New("unresolvable number")
-	emptySipItem          = SipItem{}
-	sipItemPool           = sync.Pool{New: func() interface{} { return &SipItem{} }}
 )
 
 type SipPacket struct {
@@ -45,28 +42,6 @@ type SipPacket struct {
 	//ContactHost   string `json:"contactHost"`
 	//ContactPort   int    `json:"contactPort"`
 	UserAgent string `json:"ua"`
-}
-
-type SipItem struct {
-	Caller         string
-	Callee         string
-	SrcIP          string
-	DestIP         string
-	SrcPort        uint16
-	DestPort       uint16
-	CallerDevice   string
-	CalleeDevice   string
-	ConnectTime    string
-	DisconnectTime string
-}
-
-func NewSipItem() *SipItem {
-	return sipItemPool.Get().(*SipItem)
-}
-
-func (pkt *SipItem) Free() {
-	*pkt = emptySipItem
-	sipItemPool.Put(pkt)
 }
 
 func validateNumberString(num string) bool {
