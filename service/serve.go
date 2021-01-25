@@ -30,7 +30,7 @@ type Service struct {
 	cdrs       []*dao.VoipCDR
 }
 
-func New(c *conf.Config) (s *Service, err error) {
+func New(c *conf.Config) (svr *Service, err error) {
 
 	// 话单合成模块
 	cdrPro := cdr.NewCDRProducer(c.CDR)
@@ -61,33 +61,35 @@ func New(c *conf.Config) (s *Service, err error) {
 	//    cdrPro.GenExpiredCDR(k, v.(*model.SipItem))
 	//})
 
-	synth := newSynthesizer()
-	synth.OnExpired(func(args interface{}) {
-		items := args.([]*model.SipItem)
-		for _, item := range items {
-			cdrPro.GenExpiredCDR(item.CallId, item)
-		}
-	})
-	synth.Run()
-
 	// 初始化数据解析器
-	s = &Service{
+	svr = &Service{
 		c:          c,
 		parser:     file.NewParser(c.FileParser),
 		cdrPro:     cdrPro,
 		dao:        db,
 		fraudModel: fm,
-		synth:      newSynthesizer(),
 	}
 
+	synth := newSynthesizer(svr)
+	synth.OnExpired(func(args interface{}) {
+		items := args.([]*model.SipItem)
+		for _, item := range items {
+			if item != nil {
+				cdrPro.GenExpiredCDR(item.CallId, item)
+			}
+		}
+	})
+	synth.Run()
+	svr.synth = synth
+
 	// 启动话单处理服务
-	go s.handleCDR()
+	go svr.handleCDR()
 
 	// 最后启动数据解析器
-	s.parser.SetParseFunc(s.DoLine)
-	s.parser.Run()
+	svr.parser.SetParseFunc(svr.DoLine)
+	svr.parser.Run()
 
-	return s, nil
+	return svr, nil
 }
 
 func (srv *Service) DoLine(line interface{}) {

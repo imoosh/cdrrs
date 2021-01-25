@@ -7,8 +7,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var wg sync.WaitGroup
 
 func main() {
 	n, err := strconv.Atoi(os.Args[2])
@@ -16,10 +19,15 @@ func main() {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
+
 	for i := 0; i < n; i++ {
+		wg.Add(1)
 		now := time.Now().Format("20060102150405.000000")
+		now += fmt.Sprintf("%03d", i+1)
 		go mock(os.Args[1], now)
 	}
+
+	wg.Wait()
 }
 
 func mock(filepath, basename string) {
@@ -95,4 +103,6 @@ func mock(filepath, basename string) {
 	//fmt.Printf("BYE-200OK messages completed. %d packets, %v, %.f pps\n", maxSize, time.Since(t), maxSize/time.Since(t).Seconds())
 	f, _ = os.Create(filepath + "/" + basename + ".bye.txt.ok")
 	_ = f.Close()
+
+	wg.Done()
 }

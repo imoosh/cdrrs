@@ -93,14 +93,15 @@ func (d *Dao) GetSipItems(ids []string) (res []*model.SipItem, err error) {
 		if err == redis.ErrNil {
 			return nil, nil
 		} else {
-			log.Errorf("GetSipItems conn.Do(MGET) error(%v)", err)
+			log.Errorf("GetSipItems conn.Do(MGET %s) error(%v)", args, err)
 		}
 		return
 	}
 
-	for _, bs := range bss {
+	res = make([]*model.SipItem, len(bss))
+	for i, bs := range bss {
 		if bs == nil {
-			res = append(res, nil)
+			res[i] = nil
 			continue
 		}
 
@@ -108,11 +109,12 @@ func (d *Dao) GetSipItems(ids []string) (res []*model.SipItem, err error) {
 		if err = json.Unmarshal(bs, item); err != nil {
 			item.Free()
 			err = nil
+			res[i] = nil
 			log.Errorf("json.Unmarshal error(%v)", err)
 			continue
 		}
 
-		res = append(res, item)
+		res[i] = item
 	}
 
 	return
@@ -147,7 +149,7 @@ func (d *Dao) CacheExpiredSipItemKeysSet(key string, ids []string) {
 	}
 	_, err := conn.Do("SADD", args...)
 	if err != nil {
-		log.Error("conn.Do error(%v)", err)
+		log.Errorf("conn.Do(SADD %v) error(%v)", args, err)
 	}
 }
 

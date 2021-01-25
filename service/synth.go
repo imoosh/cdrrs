@@ -23,15 +23,17 @@ type Synth struct {
 	cdrPro         *cdr.CDRProducer
 	onExpired      func(interface{})
 	nextPushTime   time.Time // 下次推送redis时间
-	oldestTodoTime time.Time // 最旧待处理key时间
+	oldestUndoTime time.Time // 最旧待处理key时间
 	pushPeriod     time.Duration
 }
 
-func newSynthesizer() *Synth {
+func newSynthesizer(svr *Service) *Synth {
 	return &Synth{
 		ch:         make(chan *model.SipItem),
 		onExpired:  _defaultExpiredFunc,
-		pushPeriod: time.Second * 2,
+		pushPeriod: time.Second * 1,
+		dao:        svr.dao,
+		cdrPro:     svr.cdrPro,
 	}
 }
 
@@ -40,23 +42,19 @@ func (synth *Synth) Input(item *model.SipItem) {
 }
 
 func (synth *Synth) expiredSetIds(now time.Time) (ids []string) {
-	var ss []string
-	for i := 1; ; i++ {
-		if now.Sub(synth.oldestTodoTime) >= _keysExpirationPeriod*time.Duration(i) {
-			t := now.Add(-_keysExpirationPeriod * time.Duration(i))
-			ss = append(ss, t.Format(_setIdsTimeFormat))
-			continue
+	var i int
+	for i = 0; ; i++ {
+		// t1 ------ tn ----------------------- now
+		// t1 : synth.oldestUndoTime
+		// now - tn = _keysExpirationPeriod
+		if now.Sub(synth.oldestUndoTime) < _keysExpirationPeriod+synth.pushPeriod*time.Duration(i) {
+			break
 		}
-		break
-	}
-	if len(ss) == 0 {
-		return
+		t := synth.oldestUndoTime.Add(synth.pushPeriod * time.Duration(i))
+		ids = append(ids, t.Format(_setIdsTimeFormat))
 	}
 
-	// 按时间顺序排序
-	for i := len(ss); i > 0; i-- {
-		ids = append(ids, ss[i-1])
-	}
+	synth.oldestUndoTime = synth.oldestUndoTime.Add(synth.pushPeriod * time.Duration(i))
 
 	return
 }
@@ -78,7 +76,7 @@ func (synth *Synth) expiredSynth() {
 		select {
 		case now := <-ticker.C:
 			// 没有超时的键
-			if synth.oldestTodoTime.IsZero() || now.Sub(synth.oldestTodoTime) < _keysExpirationPeriod {
+			if synth.oldestUndoTime.IsZero() || now.Sub(synth.oldestUndoTime) < _keysExpirationPeriod {
 				continue
 			}
 
@@ -128,9 +126,13 @@ func (synth *Synth) clearSipItems() {
 }
 
 func (synth *Synth) trySynthesize() {
+	keys := synth.sipItemKeys()
+	if len(keys) == 0 {
+		return
+	}
 
 	// 批量查询各报文对应的200OK包
-	allQueried, err := synth.dao.GetSipItems(synth.sipItemKeys())
+	allQueried, err := synth.dao.GetSipItems(keys)
 	if err != nil {
 		log.Error("synth.dao.GetSipItems error(%v)", err)
 		return
@@ -164,14 +166,15 @@ func (synth *Synth) trySynthesize() {
 		allQueried[i].Free()
 	}
 
-	synth.dao.DelSipItems(queriedKeys)
+	// 删除查询到key（因为已生成话单）
+	if len(queriedKeys) != 0 {
+		synth.dao.DelSipItems(queriedKeys)
+	}
 	synth.todo = notQueried
 }
 
 // 合成话单
 func (synth *Synth) realTimeSynth() {
-	var err error
-
 	for {
 		select {
 		case item := <-synth.ch:
@@ -186,7 +189,7 @@ func (synth *Synth) realTimeSynth() {
 			synth.trySynthesize()
 
 			// 不是第一次计算set id，处理缓存
-			if !synth.nextPushTime.IsZero() {
+			if !synth.nextPushTime.IsZero() && len(synth.todo) != 0 {
 				// 缓存key-value
 				synth.dao.CacheSipItems(synth.todo)
 
@@ -196,10 +199,7 @@ func (synth *Synth) realTimeSynth() {
 
 				synth.clearSipItems()
 			} else {
-				synth.oldestTodoTime = synth.nextPushTime
-				if err != nil {
-					log.Error(err)
-				}
+				synth.oldestUndoTime = synth.nextPushTime
 			}
 
 			synth.todo = append(synth.todo, item)
