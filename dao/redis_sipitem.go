@@ -28,7 +28,7 @@ func (d *Dao) CacheSipItem(data *model.SipItem) {
 	}
 }
 
-func (d *Dao) CacheSipItems(data map[string]*model.SipItem) {
+func (d *Dao) CacheSipItems(data []*model.SipItem) {
 	var (
 		conn = d.redis.Get(context.TODO())
 		args = redis.Args{}
@@ -62,6 +62,9 @@ func (d *Dao) GetSipItem(k string) (item *model.SipItem, err error) {
 	defer conn.Close()
 
 	if bs, err = redis.Bytes(conn.Do("GET", k)); err != nil {
+		if err == redis.ErrNil {
+			return nil, nil
+		}
 		log.Error(err)
 		return nil, err
 	}
@@ -75,7 +78,7 @@ func (d *Dao) GetSipItem(k string) (item *model.SipItem, err error) {
 	return item, nil
 }
 
-func (d *Dao) GetSipItems(ids []string) (res map[string]*model.SipItem, err error) {
+func (d *Dao) GetSipItems(ids []string) (res []*model.SipItem, err error) {
 	var (
 		bss  [][]byte
 		args = redis.Args{}
@@ -88,15 +91,19 @@ func (d *Dao) GetSipItems(ids []string) (res map[string]*model.SipItem, err erro
 	}
 	if bss, err = redis.ByteSlices(conn.Do("MGET", args...)); err != nil {
 		if err == redis.ErrNil {
-			err = nil
+			return nil, nil
 		} else {
 			log.Errorf("GetSipItems conn.Do(MGET) error(%v)", err)
 		}
 		return
 	}
 
-	res = make(map[string]*model.SipItem, len(ids))
 	for _, bs := range bss {
+		if bs == nil {
+			res = append(res, nil)
+			continue
+		}
+
 		item := model.NewSipItem()
 		if err = json.Unmarshal(bs, item); err != nil {
 			item.Free()
@@ -105,7 +112,7 @@ func (d *Dao) GetSipItems(ids []string) (res map[string]*model.SipItem, err erro
 			continue
 		}
 
-		res[item.CallId] = item
+		res = append(res, item)
 	}
 
 	return
@@ -167,6 +174,9 @@ func (d *Dao) GetExpiredSipItemKeysSetMembers(k string) (mem []string, err error
 	defer conn.Close()
 
 	if mem, err = redis.Strings(conn.Do("SMEMBERS", k)); err != nil {
+		if err == redis.ErrNil {
+			return nil, nil
+		}
 		log.Errorf("conn.Do(SMEMBERS) error(%v)", err)
 		return nil, err
 	}

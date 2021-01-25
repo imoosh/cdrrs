@@ -3,6 +3,7 @@ package voip
 import (
 	"bytes"
 	"centnet-cdrrs/dao"
+	"centnet-cdrrs/model"
 	"centnet-cdrrs/service/voip/prot/sip"
 	"errors"
 	"strconv"
@@ -13,36 +14,6 @@ var (
 	errInvalidSipPacket   = errors.New("not invite/bye 200 ok message")
 	errUnresolvableNumber = errors.New("unresolvable number")
 )
-
-type SipPacket struct {
-	//Id            uint64 `json:"id"`
-	//EventId       string `json:"eventId"`
-	EventTime     string `json:"t"`
-	Sip           string `json:"si"`
-	Sport         int    `json:"sp"`
-	Dip           string `json:"di"`
-	Dport         int    `json:"dp"`
-	CallId        string `json:"-"`
-	CseqMethod    string `json:"cm"`
-	ReqStatusCode int    `json:"-"`
-	//ReqMethod     string `json:"reqMethod"`
-	//ReqUser       string `json:"reqUser"`
-	//ReqHost       string `json:"reqHost"`
-	//ReqPort       int    `json:"reqPort"`
-	//FromName      string `json:"fromName"`
-	FromUser string `json:"fu"`
-	//FromHost      string `json:"fromHost"`
-	//FromPort      int    `json:"fromPort"`
-	//ToName        string `json:"toName"`
-	ToUser string `json:"tu"`
-	//ToHost        string `json:"toHost"`
-	//ToPort        int    `json:"toPort"`
-	//ContactName   string `json:"contactName"`
-	//ContactUser   string `json:"contactUser"`
-	//ContactHost   string `json:"contactHost"`
-	//ContactPort   int    `json:"contactPort"`
-	UserAgent string `json:"ua"`
-}
 
 func validateNumberString(num string) bool {
 	for _, v := range num {
@@ -143,7 +114,7 @@ func atoi(s string, n int) (int, error) {
 	return strconv.Atoi(s)
 }
 
-func ParseSipPacket(line interface{}, pkt *SipPacket) error {
+func ParseSipPacket(line interface{}, pkt *model.SipPacket) error {
 	ss := split(pretreatment(line.([]byte)))
 	if len(ss) == 0 {
 		return errInvalidRawTextData

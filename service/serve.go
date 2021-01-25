@@ -26,6 +26,7 @@ type Service struct {
 	fraudModel *kafka.Producer
 	mc         *local.ShardedCache
 	cdrPro     *cdr.CDRProducer
+	synth      *Synth
 	cdrs       []*dao.VoipCDR
 }
 
@@ -55,10 +56,19 @@ func New(c *conf.Config) (s *Service, err error) {
 	}
 
 	// 本地缓存引擎
-	mc := local.NewShardedCache(time.Duration(c.CDR.CachedLife), time.Second*30, 1024)
-	mc.OnEvicted(func(k string, v interface{}) {
-		cdrPro.GenExpiredCDR(k, v.(*model.SipItem))
+	//mc := local.NewShardedCache(time.Duration(c.CDR.CachedLife), time.Second*30, 1024)
+	//mc.OnEvicted(func(k string, v interface{}) {
+	//    cdrPro.GenExpiredCDR(k, v.(*model.SipItem))
+	//})
+
+	synth := newSynthesizer()
+	synth.OnExpired(func(args interface{}) {
+		items := args.([]*model.SipItem)
+		for _, item := range items {
+			cdrPro.GenExpiredCDR(item.CallId, item)
+		}
 	})
+	synth.Run()
 
 	// 初始化数据解析器
 	s = &Service{
@@ -67,7 +77,7 @@ func New(c *conf.Config) (s *Service, err error) {
 		cdrPro:     cdrPro,
 		dao:        db,
 		fraudModel: fm,
-		mc:         mc,
+		synth:      newSynthesizer(),
 	}
 
 	// 启动话单处理服务
@@ -80,52 +90,28 @@ func New(c *conf.Config) (s *Service, err error) {
 	return s, nil
 }
 
-func (s *Service) DoLine(line interface{}) {
+func (srv *Service) DoLine(line interface{}) {
 
 	// 解析sip报文
-	var pkt voip.SipPacket
-	if nil != voip.ParseSipPacket(line, &pkt) {
+	var sip model.SipPacket
+	if nil != voip.ParseSipPacket(line, &sip) {
 		return
 	}
 
 	// invite-200ok消息
-	if pkt.CseqMethod == "INVITE" && pkt.ReqStatusCode == 200 {
-		item := model.NewSipItem()
-		item.CallId = pkt.CallId
-		item.Caller = pkt.FromUser
-		item.Callee = pkt.ToUser
-		item.SrcIP = pkt.Sip
-		item.DestIP = pkt.Dip
-		item.SrcPort = uint16(pkt.Sport)
-		item.DestPort = uint16(pkt.Dport)
-		item.CalleeDevice = pkt.UserAgent
-		item.ConnectTime = pkt.EventTime
+	if sip.CseqMethod == "INVITE" && sip.ReqStatusCode == 200 {
+		invItem := model.NewSipItemFromSipPacket(&sip)
+		invItem.Type = model.SipStatusInvite200OK
+		invItem.CalleeDevice = sip.UserAgent
+		invItem.ConnectTime = sip.EventTime
 
-		if ok, v := s.mc.AddOrDel(pkt.CallId, item, 0); !ok {
-			// 结束时间不为空（bye消息处理过），合并成话单
-			if len(v.(*model.SipItem).DisconnectTime) != 0 {
-				item.DisconnectTime = v.(*model.SipItem).DisconnectTime
-				if c := s.cdrPro.Gen(pkt.CallId, item); c != nil {
-					s.cdrPro.Put(c)
-				}
-			}
-			item.Free()
-		}
+		srv.synth.Input(invItem)
+	} else if sip.CseqMethod == "BYE" && sip.ReqStatusCode == 200 {
+		byeItem := model.NewSipItemFromSipPacket(&sip)
+		byeItem.Type = model.SipStatusBye200OK
+		byeItem.DisconnectTime = sip.EventTime
 
-	} else if pkt.CseqMethod == "BYE" && pkt.ReqStatusCode == 200 {
-		item := model.NewSipItem()
-		item.DisconnectTime = pkt.EventTime
-
-		if ok, v := s.mc.AddOrDel(pkt.CallId, item, 0); !ok {
-			// 开始时间不为空（invite消息处理过），合并成话单
-			if len(v.(*model.SipItem).ConnectTime) != 0 {
-				v.(*model.SipItem).DisconnectTime = pkt.EventTime
-				if c := s.cdrPro.Gen(pkt.CallId, v.(*model.SipItem)); c != nil {
-					s.cdrPro.Put(c)
-				}
-			}
-			item.Free()
-		}
+		srv.synth.Input(byeItem)
 	} else {
 		log.Debug("no handler for else condition")
 	}
@@ -135,11 +121,11 @@ func handleCDRCallback(vc interface{}) {
 	_cdrCh <- vc.(*dao.VoipCDR)
 }
 
-func (s *Service) handleCDR() {
+func (srv *Service) handleCDR() {
 	var d time.Duration
 	var curTableName string
 
-	if d = time.Duration(s.c.CDR.CdrFlushPeriod); d == 0 {
+	if d = time.Duration(srv.c.CDR.CdrFlushPeriod); d == 0 {
 		d = time.Second * 10
 	}
 	ticker := time.NewTicker(d)
@@ -147,50 +133,50 @@ func (s *Service) handleCDR() {
 	for {
 		select {
 		case c := <-_cdrCh:
-			s.pushCDRToKafka(c)
+			srv.pushCDRToKafka(c)
 
 			if c.TableName != curTableName {
-				s.dao.CreateTable(c.TableName)
+				srv.dao.CreateTable(c.TableName)
 				// 不是第一次建表，将部分话单先入旧库
 				if len(curTableName) != 0 {
-					s.flushCDRToDB(curTableName, s.cdrs)
+					srv.flushCDRToDB(curTableName, srv.cdrs)
 				}
 				curTableName = c.TableName
 			}
 
-			s.cdrs = append(s.cdrs, c)
-			if len(s.cdrs) == s.c.CDR.MaxFlushCap {
-				s.flushCDRToDB(curTableName, s.cdrs)
+			srv.cdrs = append(srv.cdrs, c)
+			if len(srv.cdrs) == srv.c.CDR.MaxFlushCap {
+				srv.flushCDRToDB(curTableName, srv.cdrs)
 			}
 		case <-ticker.C:
-			s.flushCDRToDB(curTableName, s.cdrs)
+			srv.flushCDRToDB(curTableName, srv.cdrs)
 		}
 	}
 }
 
-func (s *Service) clearCDRs() {
-	for _, x := range s.cdrs {
-		s.cdrPro.P.Free(x)
+func (srv *Service) clearCDRs() {
+	for _, x := range srv.cdrs {
+		srv.cdrPro.P.Free(x)
 	}
-	s.cdrs = s.cdrs[:0]
+	srv.cdrs = srv.cdrs[:0]
 }
 
-func (s *Service) pushCDRToKafka(c *dao.VoipCDR) {
+func (srv *Service) pushCDRToKafka(c *dao.VoipCDR) {
 	// 推送至诈骗分析模型
-	if s.c.Kafka.FraudModel.Enable {
+	if srv.c.Kafka.FraudModel.Enable {
 		cdrStr, err := json.Marshal(c)
 		if err != nil {
 			log.Errorf("json.Marshal error: ", err)
 			return
 		}
 
-		s.fraudModel.Log(fmt.Sprintf("%d", c.Id), string(cdrStr))
+		srv.fraudModel.Log(fmt.Sprintf("%d", c.Id), string(cdrStr))
 	}
 }
 
-func (s *Service) flushCDRToDB(tblName string, cdrs []*dao.VoipCDR) {
-	s.dao.MultiInsertCDR(tblName, cdrs)
-	s.clearCDRs()
+func (srv *Service) flushCDRToDB(tblName string, cdrs []*dao.VoipCDR) {
+	srv.dao.MultiInsertCDR(tblName, cdrs)
+	srv.clearCDRs()
 }
 
 //func writeCDRToTxt(m *kafka.ConsumerGroupMember, k, v interface{}) {
