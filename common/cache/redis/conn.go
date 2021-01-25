@@ -30,7 +30,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-
 // conn is the low-level implementation of Conn
 type conn struct {
 
@@ -79,7 +78,6 @@ type dialOptions struct {
 	db           int
 	password     string
 }
-
 
 // DialReadTimeout specifies the timeout for reading a single command reply.
 func DialReadTimeout(d time.Duration) DialOption {
