@@ -35,8 +35,8 @@ func getConfig() *redis.Config {
 	}
 }
 
-func getSipItems(n int) map[string]*model.SipItem {
-	var items = make(map[string]*model.SipItem)
+func getSipItems(n int) map[string]*model.SipCache {
+	var items = make(map[string]*model.SipCache)
 	for i := 0; i < n; i++ {
 		item := getSipItem()
 		items[item.CallId] = item
@@ -45,8 +45,8 @@ func getSipItems(n int) map[string]*model.SipItem {
 	return items
 }
 
-func getSipItem() *model.SipItem {
-	return &model.SipItem{
+func getSipItem() *model.SipCache {
+	return &model.SipCache{
 		CallId:         uuid.NewV4().String(),
 		Caller:         "1101000",
 		Callee:         "18113007500",
