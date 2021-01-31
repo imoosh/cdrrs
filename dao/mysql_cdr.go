@@ -99,5 +99,5 @@ func (d *Dao) MultiInsertCDR(tableName string, cdrs []*VoipCDR) {
     }
 
     cdrsCount = cdrsCount + uint64(len(cdrs))
-    log.Debugf("%4d CDRs (total %d) -> '%s'", len(cdrs), cdrsCount, tableName)
+    log.Debugf("%5d CDRs (total %d) -> '%s'", len(cdrs), cdrsCount, tableName)
 }

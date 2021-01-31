@@ -9,6 +9,7 @@ import (
     "io/ioutil"
     "os"
     "path/filepath"
+    "runtime"
     "sort"
     "strings"
     "sync"
@@ -187,7 +188,10 @@ func (p *Parser) Run() {
         }
     }()
 
-    // 开启多通道读文件
+    // 开启多通道读文件，最少24线程处理
+    if p.conf.MaxParseProcs <= 0 && runtime.NumCPU() <= 12 {
+        p.conf.MaxParseProcs = 24
+    }
     for i := 0; i < p.conf.MaxParseProcs; i++ {
         go p.parseLoop()
     }

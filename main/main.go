@@ -9,7 +9,6 @@ import (
     "os"
     "os/signal"
     "runtime"
-    "runtime/debug"
     "syscall"
     "time"
 )
@@ -58,19 +57,7 @@ func main() {
     service.New(conf.Conf)
 
     printMemStatsLoop()
-
-    go func() {
-        time.Sleep(time.Minute * 12)
-        log.Debug("debug.SetGCPercent(10) before")
-        printMemStats()
-
-        log.Debug("debug.SetGCPercent(10)")
-        debug.SetGCPercent(10)
-        time.Sleep(time.Minute)
-
-        log.Debug("debug.SetGCPercent(10) after")
-        printMemStats()
-    }()
+    //debug.SetGCPercent(10)
 
     // os signal
     sigterm := make(chan os.Signal, 1)

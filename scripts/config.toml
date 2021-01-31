@@ -17,8 +17,8 @@
     rootPath = "/home"
     # 开始解析哪天目录下的文件
     startDatePath = "202012/20201201"
-    # 最大并发解析线程数
-    maxParseProcs = 36
+    # 最大并发解析线程数(设置0为系统默认值)
+    maxParseProcs = 0
 
 # 话单数据库配置
 [orm]
@@ -29,8 +29,8 @@
     idleTimeout = "10m"
 
 [redis]
-    active = 10
-    idle = 2
+    active = 100
+    idle = 5
     idleTimeout = "1m"
     waitTimeout = "0s"
     wait = false
@@ -52,7 +52,7 @@
     # 话单缓存最大数量
     maxCacheCap = 100000
     # 话单缓存刷新间隔
-    cdrFlushPeriod = "10s"
+    cdrFlushPeriod = "5s"
     # 话单分表间隔时间
     cdrTablePeriod = "5m"
 
